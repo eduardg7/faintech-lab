@@ -1,13 +1,14 @@
 """Memory API router with CRUD endpoints."""
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 import hashlib
 import json
 
 from app.core.database import get_db
+from app.core.errors import ContentTooLargeError, NotFoundError, ValidationError, DatabaseError
 from app.models.memory import Memory
 from app.schemas.memory import (
     MemoryCreate,
@@ -47,10 +48,7 @@ async def create_memory(
     if content_size > 10240:
         # Log validation rejection (AC #7)
         print(f"[Validation] Memory rejected: content size {content_size} bytes exceeds 10KB limit")
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Content size {content_size} bytes exceeds 10KB limit"
-        )
+        raise ContentTooLargeError(content_size=content_size, max_size=10240)
     
     # Generate content hash
     content_hash = hashlib.sha256(memory_data.content.encode('utf-8')).hexdigest()
@@ -207,10 +205,7 @@ async def get_memory(
     memory = result.scalar_one_or_none()
     
     if not memory:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Memory {memory_id} not found"
-        )
+        raise NotFoundError(resource="Memory", identifier=memory_id)
     
     return MemoryResponse(
         id=memory.id,
@@ -253,20 +248,14 @@ async def update_memory(
     memory = result.scalar_one_or_none()
     
     if not memory:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Memory {memory_id} not found"
-        )
+        raise NotFoundError(resource="Memory", identifier=memory_id)
     
     # Validate content size if provided
     if memory_data.content:
         content_size = len(memory_data.content.encode('utf-8'))
         if content_size > 10240:
             print(f"[Validation] Memory update rejected: content size {content_size} bytes exceeds 10KB limit")
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"Content size {content_size} bytes exceeds 10KB limit"
-            )
+            raise ContentTooLargeError(content_size=content_size, max_size=10240)
     
     # Update fields
     update_data = memory_data.dict(exclude_unset=True)
@@ -319,10 +308,7 @@ async def delete_memory(
     memory = result.scalar_one_or_none()
     
     if not memory:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Memory {memory_id} not found"
-        )
+        raise NotFoundError(resource="Memory", identifier=memory_id)
     
     # Soft delete
     memory.deleted_at = datetime.utcnow()
