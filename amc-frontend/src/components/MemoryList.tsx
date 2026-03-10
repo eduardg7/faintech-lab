@@ -4,6 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api, Memory } from '@/lib/api';
 import { useState } from 'react';
+import ErrorState from './ui/ErrorState';
+import LoadingState from './ui/LoadingState';
+import EmptyState from './ui/EmptyState';
 
 export default function MemoryList() {
   const { apiKey, logout } = useAuth();
@@ -44,6 +47,13 @@ export default function MemoryList() {
   };
 
   const memories = searchQuery ? searchData?.results.map((r) => r.memory) : data?.memories;
+  const hasActiveFilters = searchQuery || selectedType || selectedAgent;
+
+  const clearFilters = () => {
+    setSelectedType('');
+    setSelectedAgent('');
+    setSearchQuery('');
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -60,16 +70,27 @@ export default function MemoryList() {
     }
   };
 
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600">Failed to load memories</p>
-        <button
-          onClick={() => refetch()}
-          className="mt-4 px-4 py-2 bg-amc-primary text-white rounded"
-        >
-          Retry
-        </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Memory Dashboard</h1>
+          <button
+            onClick={logout}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary rounded"
+            aria-label="Logout"
+          >
+            Logout
+          </button>
+        </div>
+        <ErrorState 
+          message="We couldn't load your memories. Please check your connection and try again."
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -81,7 +102,8 @@ export default function MemoryList() {
         <h1 className="text-2xl font-bold text-gray-900">Memory Dashboard</h1>
         <button
           onClick={logout}
-          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary rounded transition-colors"
+          aria-label="Logout"
         >
           Logout
         </button>
@@ -90,26 +112,37 @@ export default function MemoryList() {
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">
         <form onSubmit={handleSearch} className="flex gap-2">
+          <label htmlFor="search-input" className="sr-only">
+            Search memories
+          </label>
           <input
+            id="search-input"
             type="text"
             placeholder="Search memories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:border-transparent"
+            aria-label="Search memories"
           />
           <button
             type="submit"
-            className="px-6 py-2 bg-amc-primary text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-amc-primary text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary transition-colors"
+            aria-label="Submit search"
           >
             Search
           </button>
         </form>
 
         <div className="flex flex-wrap gap-2">
+          <label htmlFor="type-filter" className="sr-only">
+            Filter by memory type
+          </label>
           <select
+            id="type-filter"
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+            aria-label="Filter by type"
           >
             <option value="">All Types</option>
             <option value="outcome">Outcome</option>
@@ -118,21 +151,23 @@ export default function MemoryList() {
             <option value="decision">Decision</option>
           </select>
 
+          <label htmlFor="agent-filter" className="sr-only">
+            Filter by agent ID
+          </label>
           <input
+            id="agent-filter"
             type="text"
             placeholder="Filter by agent ID"
             value={selectedAgent}
             onChange={(e) => setSelectedAgent(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+            aria-label="Filter by agent ID"
           />
 
           <button
-            onClick={() => {
-              setSelectedType('');
-              setSelectedAgent('');
-              setSearchQuery('');
-            }}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900"
+            onClick={clearFilters}
+            className="px-4 py-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary rounded transition-colors"
+            aria-label="Clear all filters"
           >
             Clear filters
           </button>
@@ -140,16 +175,13 @@ export default function MemoryList() {
       </div>
 
       {/* Memory List */}
-      {isLoading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amc-primary mx-auto"></div>
-        </div>
-      ) : memories && memories.length > 0 ? (
-        <div className="space-y-4">
+      {memories && memories.length > 0 ? (
+        <div className="space-y-4" role="list" aria-label="Memory list">
           {memories.map((memory) => (
-            <div
+            <article
               key={memory.id}
               className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              role="listitem"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -157,37 +189,44 @@ export default function MemoryList() {
                     className={`px-2 py-1 text-xs font-medium rounded ${getTypeColor(
                       memory.type
                     )}`}
+                    aria-label={`Memory type: ${memory.type}`}
                   >
                     {memory.type}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500" aria-label={`Agent ID: ${memory.agent_id}`}>
                     {memory.agent_id}
                   </span>
                 </div>
-                <span className="text-xs text-gray-400">
+                <time 
+                  className="text-xs text-gray-400"
+                  dateTime={memory.created_at}
+                  aria-label={`Created at ${new Date(memory.created_at).toLocaleString()}`}
+                >
                   {new Date(memory.created_at).toLocaleString()}
-                </span>
+                </time>
               </div>
               <p className="text-gray-700 mb-2">{memory.content}</p>
               {memory.tags && memory.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1" role="list" aria-label="Tags">
                   {memory.tags.map((tag) => (
                     <span
                       key={tag}
                       className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
+                      role="listitem"
                     >
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
-            </div>
+            </article>
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
-          No memories found
-        </div>
+        <EmptyState 
+          hasFilters={!!hasActiveFilters}
+          onClearFilters={clearFilters}
+        />
       )}
     </div>
   );
