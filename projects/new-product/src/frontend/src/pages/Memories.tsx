@@ -45,8 +45,9 @@ export default function Memories() {
         <button
           onClick={() => refetch()}
           className="flex items-center gap-2 px-4 py-2 bg-dark-800 text-dark-200 rounded-lg hover:bg-dark-700 transition-colors"
+          aria-label="Refresh memories list"
         >
-          <span>🔄</span>
+          <span role="img" aria-label="Refresh">🔄</span>
           Refresh
         </button>
       </div>
@@ -64,6 +65,7 @@ export default function Memories() {
                   ? 'bg-primary-600 text-white'
                   : 'bg-dark-800 text-dark-300 hover:bg-dark-700 hover:text-white'
               )}
+              aria-pressed={selectedAgent === agent}
             >
               {agent === 'all' ? 'All Agents' : agent}
             </button>
@@ -96,16 +98,18 @@ export default function Memories() {
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
               className="px-4 py-2 bg-dark-800 text-dark-200 rounded-lg hover:bg-dark-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous page"
             >
               Previous
             </button>
-            <span className="text-dark-400">
+            <span className="text-dark-400" aria-label={`Page ${page + 1} of ${Math.ceil(data.total / limit)}`}>
               Page {page + 1} of {Math.ceil(data.total / limit)}
             </span>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={(page + 1) * limit >= data.total}
               className="px-4 py-2 bg-dark-800 text-dark-200 rounded-lg hover:bg-dark-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next page"
             >
               Next
             </button>
@@ -148,6 +152,7 @@ function MemoryCard({ memory }: { memory: import('../types').Memory }) {
             <button
               onClick={() => setExpanded(!expanded)}
               className="text-primary-400 text-sm mt-2 hover:text-primary-300"
+              aria-expanded={expanded}
             >
               {expanded ? 'Show less' : 'Show more'}
             </button>

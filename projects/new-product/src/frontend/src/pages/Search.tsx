@@ -42,12 +42,14 @@ export default function Search() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search memories..."
               className="w-full px-4 py-3 bg-dark-900 border border-dark-800 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 transition-colors"
+              aria-label="Search memories"
             />
           </div>
           <button
             type="submit"
             disabled={!query.trim()}
             className="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Search"
           >
             Search
           </button>
@@ -66,6 +68,7 @@ export default function Search() {
                   ? 'bg-dark-800 text-white'
                   : 'text-dark-400 hover:text-white hover:bg-dark-800/50'
               )}
+              aria-pressed={selectedAgent === agent}
             >
               {agent === 'all' ? 'All Agents' : agent}
             </button>
@@ -123,7 +126,7 @@ export default function Search() {
       {/* Empty state */}
       {!searchTerm && (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="text-6xl mb-4" role="img" aria-label="Magnifying glass">🔍</div>
           <p className="text-dark-400 text-lg">Enter a search term to find memories</p>
           <p className="text-dark-500 text-sm mt-2">Search across all agents or filter by specific agent</p>
         </div>
