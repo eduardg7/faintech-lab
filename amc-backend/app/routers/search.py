@@ -194,7 +194,7 @@ async def search_suggestions(
     """
     Get search suggestions based on prefix.
     
-    Returns distinct words from memory content that start with prefix.
+    Returns distinct words from memory content that start with the prefix.
     """
     is_postgresql = await _detect_postgresql(db)
     
