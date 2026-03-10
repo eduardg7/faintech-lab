@@ -83,13 +83,81 @@ stat -f "%A %N" ~/.agent-memory/*/*.jsonl
 # Expected: 600 for files, 700 for directories
 ```
 
+## Content Validation and Sanitization
+
+The memory system validates all content before writing to prevent malicious or malformed data from being persisted.
+
+### Validation Rules
+
+| Check | Limit | Action |
+|-------|-------|--------|
+| Content size | 10KB max | Reject if exceeded |
+| Script tags | `<script>...</script>` | Reject & sanitize |
+| SQL injection | `UNION SELECT`, `DROP TABLE`, etc. | Reject |
+| Command injection | `\| rm`, `; wget`, backticks, etc. | Reject |
+| Special char ratio | 30% max | Reject (DoS prevention) |
+
+### Implementation
+
+Content validation is enforced in `memory/store.py`:
+
+```python
+from memory.store import validate_content
+
+# Validate before write
+is_valid, sanitized, reason = validate_content(content)
+if not is_valid:
+    raise ValueError(f"Content validation failed: {reason}")
+```
+
+### Blocked Patterns
+
+The following patterns are detected and blocked:
+
+1. **Script Tags**: `<script>...</script>` (XSS prevention)
+2. **SQL Injection**: `UNION SELECT`, `INSERT INTO`, `DROP TABLE`, etc.
+3. **Command Injection**: Pipe to dangerous commands, backticks, `$()`
+4. **Excessive Special Characters**: >30% non-alphanumeric (DoS prevention)
+
+### Logging
+
+Rejected content is logged to `~/.agent-memory/validation.log` with:
+- Timestamp
+- Agent ID (if available)
+- Pattern type detected
+- Masked preview of content
+
+### Usage
+
+```python
+from memory.store import MemoryStore
+from memory.models import MemoryEntry
+
+store = MemoryStore("/path/to/memory")
+
+# This will raise ValueError if content is malicious
+entry = MemoryEntry(
+    agent_id="agent-1",
+    content="<script>alert('xss')</script>",  # Will be rejected
+    type=MemoryType.LEARNING
+)
+store.write(entry)  # Raises: ValueError: Content contains script tags
+```
+
+### Performance
+
+- Validation overhead: <10ms per write
+- Maximum content size: 10KB
+- No external dependencies (pure Python regex)
+
 ### Security Risks Addressed
 
 | Risk ID | Description | Mitigation |
 |---------|-------------|------------|
 | R-LAB-001 | Memory files use default permissions | File permission hardening (0o600/0o700) |
 | R-LAB-002 | No agent-scoped access control | See LAB-SEC-004 (access control) |
-| R-LAB-003 | No content validation | See LAB-SEC-003 (content sanitization) |
+| R-LAB-003 | No content validation | Content validation (LAB-SEC-003) |
+| R-LAB-004 | Secrets in memory | See LAB-SEC-001 (secrets detection) |
 
 ### Related Tasks
 
