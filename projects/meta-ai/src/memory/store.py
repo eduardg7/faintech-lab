@@ -78,7 +78,9 @@ def validate_content(content: str, log_path: Optional[Path] = None) -> Tuple[boo
         return False, "", reason
     
     # Check for excessive special characters (DoS prevention)
-    special_char_count = sum(1 for c in content if not c.isalnum() and not c.isspace())
+    # Allow common safe characters: punctuation, quotes, JSON/URL chars
+    safe_chars = set('.,!?;:\'"-()[]{}/@#$_+=~`| \n\t\r')
+    special_char_count = sum(1 for c in content if not c.isalnum() and c not in safe_chars)
     if len(content) > 0 and (special_char_count / len(content)) > MAX_SPECIAL_CHAR_RATIO:
         reason = f"Content has excessive special characters ({special_char_count}/{len(content)})"
         _log_rejection(content, reason, log_path)
