@@ -1,5 +1,5 @@
 """Memory model for core memory storage."""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Float, CheckConstraint, Index, ARRAY
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Float, CheckConstraint, Index, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from typing import Optional
@@ -28,7 +28,8 @@ class Memory(Base):
     content_hash = Column(String(64), nullable=False, index=True)  # SHA-256 for deduplication
     
     # Embedding vector for semantic search (1536 dimensions for text-embedding-3-small)
-    embedding = Column(ARRAY(Float), nullable=True, index=True)  # Requires pgvector
+    # Stored as JSON for SQLite compatibility; migrate to pgvector Vector type in TD-015
+    embedding = Column(JSON, nullable=True)  # JSON array of floats
     
     # Metadata (stored as JSON string for SQLite compatibility)
     tags = Column(Text, nullable=False, default="[]")  # JSON array as string
@@ -88,3 +89,11 @@ class Memory(Base):
     def set_metadata(self, metadata: dict) -> None:
         """Set metadata from a dictionary."""
         self.meta_data = json.dumps(metadata)
+
+    def get_embedding(self) -> Optional[list[float]]:
+        """Get embedding as a list of floats."""
+        return self.embedding if self.embedding else None
+
+    def set_embedding(self, embedding: list[float]) -> None:
+        """Set embedding from a list of floats."""
+        self.embedding = embedding

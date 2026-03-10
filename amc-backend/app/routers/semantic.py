@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, text
 from pydantic import BaseModel, Field
 import time
+import numpy as np
 
 from app.core.database import get_db
 from app.core.jobs import JobQueue, get_job_queue
@@ -81,51 +82,57 @@ async def semantic_search(
     query_embedding = query_embedding_result['embedding']
     embedding_time = (time.perf_counter() - embed_start) * 1000
     
-    # Build query for vector similarity search
-    # PostgreSQL with pgvector uses the <=> operator for cosine similarity
-    query = text("""
-        SELECT 
-            id, workspace_id, agent_id, project_id, type, content, 
-            tags, importance, created_at, updated_at,
-            1 - (embedding <=> :query_vector) as similarity
-        FROM memories
-        WHERE deleted_at IS NULL
-        AND embedding IS NOT NULL
-        AND (embedding <=> :query_vector) >= :min_similarity
-        ORDER BY similarity DESC
-        LIMIT :limit
-    """)
-    
-    # Execute query
-    result = await db.execute(
-        query,
-        {
-            "query_vector": query_embedding,
-            "min_similarity": request.min_similarity,
-            "limit": request.limit
-        }
+    # TODO: Migrate to pgvector for production (TD-015)
+    # Current implementation uses Python cosine similarity for SQLite compatibility
+    # Load all memories with embeddings (temporary workaround)
+    query = select(Memory).where(
+        and_(
+            Memory.deleted_at.is_(None),
+            Memory.embedding.isnot(None)
+        )
     )
-    
-    rows = result.all()
+    result = await db.execute(query)
+    memories = result.scalars().all()
+
+    # Compute cosine similarity in Python
+    query_vec = np.array(query_embedding)
+    query_norm = np.linalg.norm(query_vec)
+
+    scored_memories = []
+    for memory in memories:
+        if memory.embedding and len(memory.embedding) > 0:
+            mem_vec = np.array(memory.embedding)
+            mem_norm = np.linalg.norm(mem_vec)
+
+            # Cosine similarity: (A · B) / (||A|| ||B||)
+            if query_norm > 0 and mem_norm > 0:
+                similarity = np.dot(query_vec, mem_vec) / (query_norm * mem_norm)
+
+                if similarity >= request.min_similarity:
+                    scored_memories.append((memory, similarity))
+
+    # Sort by similarity (descending) and limit
+    scored_memories.sort(key=lambda x: x[1], reverse=True)
+    scored_memories = scored_memories[:request.limit]
+
+    # Convert to response format
+    search_results = []
+    for memory, similarity in scored_memories:
+        search_results.append(SemanticSearchResult(
+            id=memory.id,
+            workspace_id=memory.workspace_id,
+            agent_id=memory.agent_id,
+            project_id=memory.project_id,
+            memory_type=memory.type,
+            content=memory.content,
+            tags=memory.get_tags(),
+            similarity_score=float(similarity),
+            created_at=memory.created_at
+        ))
     
     # Calculate total time
     query_time_ms = (time.perf_counter() - start_time) * 1000
-    
-    # Convert to response format
-    search_results = []
-    for row in rows:
-        search_results.append(SemanticSearchResult(
-            id=row[0],
-            workspace_id=row[1],
-            agent_id=row[2],
-            project_id=row[3],
-            memory_type=row[4],
-            content=row[5],
-            tags=row[6] if row[6] else [],
-            similarity_score=float(row[11]),
-            created_at=row[9]
-        ))
-    
+
     return SemanticSearchResponse(
         results=search_results,
         query_time_ms=round(query_time_ms, 2),
