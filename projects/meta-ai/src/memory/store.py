@@ -33,31 +33,45 @@ class MemoryStore:
         self.base_path = base_path or Path.home() / ".agent-memory"
         self.base_path.mkdir(parents=True, exist_ok=True)
     
+    # Security constants for file permission hardening
+    FILE_PERMISSIONS = 0o600  # Owner read/write only
+    DIR_PERMISSIONS = 0o700  # Owner read/write/execute only
+
     def write(self, entry: MemoryEntry) -> str:
         """
         Write a memory entry to persistent storage.
-        
+
         Args:
             entry: MemoryEntry to persist
-            
+
         Returns:
             Entry ID
-            
+
         Performance:
             <100ms for append-only write
+
+        Security:
+            - Memory files created with 0o600 permissions (owner read/write only)
+            - Directories created with 0o700 permissions (owner only)
         """
         # Get agent-specific directory
         agent_dir = self.base_path / entry.agent_id
         agent_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        # Enforce directory permissions (security hardening)
+        os.chmod(agent_dir, self.DIR_PERMISSIONS)
+
         # Use daily JSONL file
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         memory_file = agent_dir / f"{date_str}.jsonl"
-        
+
         # Append entry
         with open(memory_file, 'a') as f:
             f.write(entry.to_json() + '\n')
-        
+
+        # Enforce file permissions (security hardening)
+        os.chmod(memory_file, self.FILE_PERMISSIONS)
+
         return entry.id
     
     def search(
