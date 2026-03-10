@@ -1,5 +1,5 @@
 # Core dependencies
-# No external dependencies required for basic functionality
+rich>=13.0.0
 
 # Development dependencies
 pytest>=7.0.0
