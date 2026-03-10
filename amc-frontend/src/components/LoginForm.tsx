@@ -55,7 +55,13 @@ export default function LoginForm() {
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div 
+              className="text-red-600 text-sm text-center" 
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
           )}
 
           <div>
