@@ -8,10 +8,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '📊' },
-  { path: '/memories', label: 'Memories', icon: '📝' },
-  { path: '/search', label: 'Search', icon: '🔍' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/', label: 'Dashboard', icon: '📊', ariaLabel: 'Dashboard - View memory statistics and overview' },
+  { path: '/memories', label: 'Memories', icon: '📝', ariaLabel: 'Memories - Browse and manage stored memories' },
+  { path: '/search', label: 'Search', icon: '🔍', ariaLabel: 'Search - Find memories by content or tags' },
+  { path: '/settings', label: 'Settings', icon: '⚙️', ariaLabel: 'Settings - Configure application preferences' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
@@ -25,7 +25,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logo */}
         <div className="p-6 border-b border-dark-800">
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-2xl">🧠</span>
+            <span className="text-2xl" aria-hidden="true">🧠</span>
             Agent Memory Cloud
           </h1>
         </div>
@@ -37,6 +37,7 @@ export default function Layout({ children }: LayoutProps) {
               <li key={item.path}>
                 <Link
                   to={item.path}
+                  aria-label={item.ariaLabel}
                   className={clsx(
                     'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                     location.pathname === item.path
@@ -44,7 +45,7 @@ export default function Layout({ children }: LayoutProps) {
                       : 'text-dark-300 hover:bg-dark-800 hover:text-white'
                   )}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-lg" aria-hidden="true">{item.icon}</span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
@@ -56,9 +57,10 @@ export default function Layout({ children }: LayoutProps) {
         <div className="p-4 border-t border-dark-800">
           <button
             onClick={logout}
+            aria-label="Logout - Sign out of your account"
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
           >
-            <span className="text-lg">🚪</span>
+            <span className="text-lg" aria-hidden="true">🚪</span>
             <span className="font-medium">Logout</span>
           </button>
         </div>
