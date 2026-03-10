@@ -10,6 +10,7 @@ import re
 import html
 
 from .models import MemoryEntry, MemoryType
+from .secrets import scan_and_validate, SecurityError
 
 
 # Content validation constants
@@ -124,6 +125,7 @@ class MemoryStore:
     - Write memory entries with structured schema
     - Search by keywords, recency, agent, type, tags
     - Auto-compaction of old entries into weekly summaries
+    - Content validation and secrets detection for security
     """
     
     def __init__(self, base_path: Optional[Path] = None):
@@ -140,26 +142,31 @@ class MemoryStore:
     FILE_PERMISSIONS = 0o600  # Owner read/write only
     DIR_PERMISSIONS = 0o700  # Owner read/write/execute only
 
-    def write(self, entry: MemoryEntry) -> str:
+    def write(self, entry: MemoryEntry, check_secrets: bool = True) -> str:
         """
         Write a memory entry to persistent storage.
 
         Args:
             entry: MemoryEntry to persist
+            check_secrets: Whether to scan for secrets before writing (default: True)
 
         Returns:
             Entry ID
-            
+
         Raises:
             ValueError: If content fails validation
+            SecurityError: If secrets detected in content (when check_secrets=True)
+
         Performance:
-            <100ms for append-only write
+            <100ms for append-only write (including secrets scan <10ms)
 
         Security:
             - Memory files created with 0o600 permissions (owner read/write only)
             - Directories created with 0o700 permissions (owner only)
+            - Content validation prevents injection attacks
+            - Secrets detection prevents accidental credential leakage
         """
-        # Validate content before writing
+        # Step 1: Validate content before writing (injection prevention)
         is_valid, sanitized_content, rejection_reason = validate_content(
             entry.content, 
             log_path=self.base_path / "validation.log"
@@ -171,6 +178,16 @@ class MemoryStore:
         # Use sanitized content
         entry.content = sanitized_content
         
+        # Step 2: Security check - scan for secrets before writing
+        if check_secrets:
+            scan_and_validate(entry.content, agent_id=entry.agent_id)
+            
+            # Also check metadata for secrets
+            if entry.metadata:
+                import json as _json
+                metadata_str = _json.dumps(entry.metadata)
+                scan_and_validate(metadata_str, agent_id=entry.agent_id)
+
         # Get agent-specific directory
         agent_dir = self.base_path / entry.agent_id
         agent_dir.mkdir(parents=True, exist_ok=True)
