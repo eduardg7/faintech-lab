@@ -12,6 +12,106 @@ import html
 from .models import MemoryEntry, MemoryType
 
 
+# Content validation constants
+MAX_CONTENT_SIZE = 10 * 1024  # 10KB per entry
+MAX_SPECIAL_CHAR_RATIO = 0.3  # Max 30% special characters
+
+# Malicious patterns to detect
+DANGEROUS_PATTERNS = {
+    'script_tags': re.compile(r'<\s*script[^>]*>.*?<\s*/\s*script\s*>', re.IGNORECASE | re.DOTALL),
+    'sql_injection': re.compile(
+        r'\b(union\s+select|select\s+.*\s+from|insert\s+into|delete\s+from|drop\s+table|'
+        r'update\s+.*\s+set|exec\s*\(|execute\s*\()',
+        re.IGNORECASE
+    ),
+    'command_injection': re.compile(
+        r'(\||;|`|\$\(|\$\{|&&|\|\||>>|>|<)\s*('
+        r'rm\s|wget\s|curl\s|bash\s|sh\s|python\s|perl\s|ruby\s|'
+        r'eval\s|exec\s|system\s|passthru\s|shell_exec\s)',
+        re.IGNORECASE
+    ),
+}
+
+
+def validate_content(content: str, log_path: Optional[Path] = None) -> Tuple[bool, str, str]:
+    """
+    Validate memory entry content for security threats.
+    
+    Args:
+        content: Content string to validate
+        log_path: Optional path to validation log file
+        
+    Returns:
+        Tuple of (is_valid, sanitized_content, rejection_reason)
+        
+    Validation checks:
+        1. Content size limit (max 10KB)
+        2. Script tag injection
+        3. SQL injection attempts
+        4. Command injection attempts
+        5. Excessive special characters (DoS prevention)
+    """
+    # Check content size
+    if len(content) > MAX_CONTENT_SIZE:
+        reason = f"Content exceeds size limit ({len(content)} > {MAX_CONTENT_SIZE} bytes)"
+        _log_rejection(content, reason, log_path)
+        return False, "", reason
+    
+    # Check for script tags
+    if DANGEROUS_PATTERNS['script_tags'].search(content):
+        reason = "Content contains script tags"
+        _log_rejection(content, reason, log_path)
+        # Sanitize by escaping HTML
+        sanitized = html.escape(content)
+        return False, sanitized, reason
+    
+    # Check for SQL injection
+    if DANGEROUS_PATTERNS['sql_injection'].search(content):
+        reason = "Content contains potential SQL injection"
+        _log_rejection(content, reason, log_path)
+        return False, "", reason
+    
+    # Check for command injection
+    if DANGEROUS_PATTERNS['command_injection'].search(content):
+        reason = "Content contains potential command injection"
+        _log_rejection(content, reason, log_path)
+        return False, "", reason
+    
+    # Check for excessive special characters (DoS prevention)
+    special_char_count = sum(1 for c in content if not c.isalnum() and not c.isspace())
+    if len(content) > 0 and (special_char_count / len(content)) > MAX_SPECIAL_CHAR_RATIO:
+        reason = f"Content has excessive special characters ({special_char_count}/{len(content)})"
+        _log_rejection(content, reason, log_path)
+        return False, "", reason
+    
+    # Content is safe - sanitize HTML but allow through
+    sanitized = html.escape(content) if '<' in content or '>' in content else content
+    
+    return True, sanitized, ""
+
+
+def _log_rejection(content: str, reason: str, log_path: Optional[Path] = None) -> None:
+    """
+    Log rejected content to validation log file.
+    
+    Args:
+        content: Rejected content
+        reason: Rejection reason
+        log_path: Path to log file (defaults to ~/.agent-memory/validation.log)
+    """
+    if log_path is None:
+        log_path = Path.home() / ".agent-memory" / "validation.log"
+    
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    log_entry = f"[{timestamp}] REJECTED: {reason}\n"
+    log_entry += f"Content preview: {content[:200]}...\n\n"
+    
+    with open(log_path, 'a') as f:
+        f.write(log_entry)
+
+
 class MemoryStore:
     """
     Persistent memory store for AI agents using file-based JSONL storage.
@@ -47,7 +147,9 @@ class MemoryStore:
 
         Returns:
             Entry ID
-
+            
+        Raises:
+            ValueError: If content fails validation
         Performance:
             <100ms for append-only write
 
@@ -55,6 +157,18 @@ class MemoryStore:
             - Memory files created with 0o600 permissions (owner read/write only)
             - Directories created with 0o700 permissions (owner only)
         """
+        # Validate content before writing
+        is_valid, sanitized_content, rejection_reason = validate_content(
+            entry.content, 
+            log_path=self.base_path / "validation.log"
+        )
+        
+        if not is_valid:
+            raise ValueError(f"Content validation failed: {rejection_reason}")
+        
+        # Use sanitized content
+        entry.content = sanitized_content
+        
         # Get agent-specific directory
         agent_dir = self.base_path / entry.agent_id
         agent_dir.mkdir(parents=True, exist_ok=True)
