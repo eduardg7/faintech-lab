@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://amc:amc_password@db:5432/amc
+      - DEBUG=true
+    depends_on:
+      - db
+    volumes:
+      - ./app:/app/app  # Mount for development
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=amc
+      - POSTGRES_PASSWORD=amc_password
+      - POSTGRES_DB=amc
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
