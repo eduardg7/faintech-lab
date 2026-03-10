@@ -1,5 +1,5 @@
 """Memory model for core memory storage."""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Float, CheckConstraint, Index
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Float, CheckConstraint, Index, ARRAY
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from typing import Optional
@@ -27,6 +27,9 @@ class Memory(Base):
     content = Column(Text, nullable=False)
     content_hash = Column(String(64), nullable=False, index=True)  # SHA-256 for deduplication
     
+    # Embedding vector for semantic search (1536 dimensions for text-embedding-3-small)
+    embedding = Column(ARRAY(Float), nullable=True, index=True)  # Requires pgvector
+    
     # Metadata (stored as JSON string for SQLite compatibility)
     tags = Column(Text, nullable=False, default="[]")  # JSON array as string
     importance = Column(Float, nullable=False, default=0.5)
@@ -35,6 +38,7 @@ class Memory(Base):
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, nullable=True)
+    embedded_at = Column(DateTime, nullable=True, index=True)  # When embedding was generated
     deleted_at = Column(DateTime, nullable=True)  # Soft delete
     
     # Relationships

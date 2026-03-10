@@ -42,8 +42,10 @@ def create_app() -> FastAPI:
     
     # Include routers
     from app.routers import memories_router, search_router
+    from app.routers.semantic import router as semantic_router
     app.include_router(memories_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
+    app.include_router(semantic_router, prefix=settings.api_v1_prefix)
     
     return app
 
