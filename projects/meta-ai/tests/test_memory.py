@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 from src.memory import MemoryEntry, MemoryType, MemoryStore
+from src.memory.secrets import SecurityError
 
 
 class TestMemoryEntry:
@@ -405,3 +406,66 @@ class TestIntegration:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v', '--cov=src.memory', '--cov-report=term-missing'])
+
+
+class TestSecretsIntegration:
+    """Test secrets detection integration with MemoryStore."""
+    
+    @pytest.fixture
+    def temp_store(self):
+        """Create a temporary memory store for testing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield MemoryStore(base_path=Path(tmpdir))
+    
+    def test_write_blocks_secrets(self, temp_store):
+        """Test that write() blocks entries containing secrets."""
+        entry = MemoryEntry(
+            agent_id="agent-1",
+            project_id="proj-1",
+            type=MemoryType.LEARNING,
+            content="api_key = 'sk-test123456789012345678901234'"
+        )
+        
+        with pytest.raises(SecurityError) as exc_info:
+            temp_store.write(entry)
+        
+        assert len(exc_info.value.detected_secrets) >= 1
+    
+    def test_write_allows_safe_content(self, temp_store):
+        """Test that write() allows safe content."""
+        entry = MemoryEntry(
+            agent_id="agent-1",
+            project_id="proj-1",
+            type=MemoryType.LEARNING,
+            content="Learned to use pytest fixtures effectively"
+        )
+        
+        # Should not raise
+        entry_id = temp_store.write(entry)
+        assert entry_id == entry.id
+    
+    def test_write_bypass_secrets_check(self, temp_store):
+        """Test that secrets check can be bypassed (for trusted content only)."""
+        entry = MemoryEntry(
+            agent_id="agent-1",
+            project_id="proj-1",
+            type=MemoryType.FACT,
+            content="Example api_key for testing purposes only"
+        )
+        
+        # Bypass check should succeed
+        entry_id = temp_store.write(entry, check_secrets=False)
+        assert entry_id == entry.id
+    
+    def test_metadata_secrets_detection(self, temp_store):
+        """Test that secrets in metadata are also detected."""
+        entry = MemoryEntry(
+            agent_id="agent-1",
+            project_id="proj-1",
+            type=MemoryType.FACT,
+            content="Normal content",
+            metadata={"config": "password = 'secret12345'"}
+        )
+        
+        with pytest.raises(SecurityError):
+            temp_store.write(entry)
