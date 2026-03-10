@@ -40,6 +40,10 @@ def create_app() -> FastAPI:
             "docs": f"{settings.api_v1_prefix}/docs"
         }
     
+    # Include routers
+    from app.routers import memories_router
+    app.include_router(memories_router, prefix=settings.api_v1_prefix)
+    
     return app
 
 
