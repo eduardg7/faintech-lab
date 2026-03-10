@@ -34,7 +34,10 @@ async def verify_api_key(
     if not api_key:
         raise HTTPException(
             status_code=401,
-            detail="API key required. Provide X-API-Key header."
+            detail={
+                "error": "AUTH_INVALID",
+                "message": "API key required. Provide X-API-Key header."
+            }
         )
     
     # Hash the provided key
@@ -50,7 +53,10 @@ async def verify_api_key(
     if not db_key:
         raise HTTPException(
             status_code=401,
-            detail="Invalid or revoked API key"
+            detail={
+                "error": "AUTH_INVALID",
+                "message": "Invalid or revoked API key"
+            }
         )
     
     # Update last used timestamp
