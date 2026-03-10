@@ -4,9 +4,10 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from collections import defaultdict
 import re
+import html
 
 from .models import MemoryEntry, MemoryType
 
