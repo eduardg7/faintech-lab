@@ -5,7 +5,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.middleware.rate_limit import limiter
-from app.middleware.rate_limit import rate_limit_exceeded_handler
+from app.middleware.rate_limit import rate_limit_exceeded_handler, add_rate_limit_headers
 from app.api import health
 
 # Create FastAPI app
@@ -14,6 +14,9 @@ app = FastAPI(
     version=settings.app_version,
     debug=settings.debug,
 )
+
+# Add rate limit headers middleware (must be added before rate limiter)
+app.middleware("http")(add_rate_limit_headers)
 
 # Add CORS middleware
 app.add_middleware(
