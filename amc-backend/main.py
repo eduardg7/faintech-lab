@@ -1,8 +1,12 @@
 """FastAPI application factory and main entry point."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from config import settings
+from app.core.errors import amc_error_handler, generic_error_handler, AMCError
+from app.core.rate_limit import RateLimitMiddleware
+import uuid
 
 
 def create_app() -> FastAPI:
@@ -16,6 +20,13 @@ def create_app() -> FastAPI:
         redoc_url=f"{settings.api_v1_prefix}/redoc",
     )
 
+    # Rate limiting middleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=60,
+        requests_per_hour=1000
+    )
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -24,6 +35,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Register error handlers
+    app.add_exception_handler(AMCError, amc_error_handler)
+    app.add_exception_handler(Exception, generic_error_handler)
 
     # Health check endpoint
     @app.get("/health", tags=["Health"])
