@@ -9,6 +9,7 @@ from collections import defaultdict
 import re
 
 from .models import MemoryEntry, MemoryType
+from .secrets import scan_and_validate, SecurityError
 
 
 class MemoryStore:
@@ -37,23 +38,38 @@ class MemoryStore:
     FILE_PERMISSIONS = 0o600  # Owner read/write only
     DIR_PERMISSIONS = 0o700  # Owner read/write/execute only
 
-    def write(self, entry: MemoryEntry) -> str:
+    def write(self, entry: MemoryEntry, check_secrets: bool = True) -> str:
         """
         Write a memory entry to persistent storage.
 
         Args:
             entry: MemoryEntry to persist
+            check_secrets: Whether to scan for secrets before writing (default: True)
 
         Returns:
             Entry ID
 
+        Raises:
+            SecurityError: If secrets detected in content (when check_secrets=True)
+
         Performance:
-            <100ms for append-only write
+            <100ms for append-only write (including secrets scan <10ms)
 
         Security:
             - Memory files created with 0o600 permissions (owner read/write only)
             - Directories created with 0o700 permissions (owner only)
+            - Secrets detection prevents accidental credential leakage
         """
+        # Security check: scan for secrets before writing
+        if check_secrets:
+            scan_and_validate(entry.content, agent_id=entry.agent_id)
+            
+            # Also check metadata for secrets
+            if entry.metadata:
+                import json as _json
+                metadata_str = _json.dumps(entry.metadata)
+                scan_and_validate(metadata_str, agent_id=entry.agent_id)
+
         # Get agent-specific directory
         agent_dir = self.base_path / entry.agent_id
         agent_dir.mkdir(parents=True, exist_ok=True)

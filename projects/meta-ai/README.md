@@ -130,8 +130,66 @@ This tool is part of the META-AI-002 task in Faintech Lab. It supports the self-
 - META-AI-001: Agent Memory System (persistent memory for agents)
 - META-AI-003: Execution Ledger (track agent decisions and outcomes)
 
+## Security
+
+### Secrets Detection
+
+The Memory System includes automatic secrets detection to prevent accidental credential leakage.
+
+**Protected Patterns:**
+- OpenAI API keys (`sk-...`)
+- Generic API keys (`api_key`, `apikey`, `x-api-key`)
+- Bearer tokens and JWTs
+- OAuth tokens
+- Passwords
+- AWS Access Keys (`AKIA...`)
+- AWS Secret Access Keys
+- Private keys (PEM format)
+- Database URLs with credentials
+
+**How It Works:**
+1. Every memory write is scanned for secrets before persistence
+2. If secrets detected, write is blocked with `SecurityError`
+3. Blocked attempts are logged to `~/.agent-memory/security.log`
+4. Performance impact: <5ms for typical content (keyword pre-filtering optimization)
+
+**Allowlist (Safe Patterns):**
+- `test_api_key`, `test_token`, `test_password` (test fixtures)
+- `example`, `sample`, `dummy`, `placeholder` (example values)
+- `xxx`, `redacted`, `[REDACTED]` (redacted placeholders)
+
+**Usage:**
+```python
+from src.memory.secrets import check_content_safe, SecurityError
+
+try:
+    check_content_safe(content, agent_id="my-agent")
+    # Safe to write
+except SecurityError as e:
+    print(f"Blocked: {e.message}")
+    for secret in e.detected_secrets:
+        print(f"  - {secret.secret_type.value}: {secret.masked_preview}")
+```
+
+**Disabling for Testing:**
+```python
+# In MemoryStore.write()
+store.write(entry, check_secrets=False)  # Skip secrets check
+```
+
+### File Permissions
+
+Memory files are created with restricted permissions:
+- Files: `0o600` (owner read/write only)
+- Directories: `0o700` (owner only)
+
+### Incident Response
+
+See `INCIDENT-RESPONSE-RUNBOOK.md` for security incident procedures.
+
 ---
 
 **Created**: 2026-03-09
-**Owner**: faintech-frontend (role mismatch, but executed to unblock delivery)
+**Last Updated**: 2026-03-10
+**Owner**: faintech-ciso
 **Task**: META-AI-002
