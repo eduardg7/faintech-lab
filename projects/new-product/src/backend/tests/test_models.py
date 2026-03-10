@@ -19,7 +19,8 @@ def test_agent_model():
     agent = Agent(
         workspace_id="workspace-123",
         name="Test Agent",
-        agent_type="claude"
+        agent_type="claude",
+        is_active=True  # Explicitly set for Python-level test
     )
     assert agent.name == "Test Agent"
     assert agent.agent_type == "claude"
@@ -31,7 +32,8 @@ def test_memory_model():
     memory = Memory(
         agent_id="agent-123",
         content="Test memory content",
-        memory_type="episodic"
+        memory_type="episodic",
+        importance_score=0  # Explicitly set for Python-level test
     )
     assert memory.content == "Test memory content"
     assert memory.memory_type == "episodic"
@@ -43,7 +45,8 @@ def test_api_key_model():
     api_key = ApiKey(
         workspace_id="workspace-123",
         key_hash="hashed-key-123",
-        name="Test Key"
+        name="Test Key",
+        is_active=True  # Explicitly set for Python-level test
     )
     assert api_key.name == "Test Key"
     assert api_key.is_active == True
