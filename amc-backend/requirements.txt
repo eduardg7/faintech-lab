@@ -6,5 +6,8 @@ pydantic-settings==2.5.2
 aiosqlite==0.20.0
 python-dotenv==1.0.1
 alembic==1.13.3
+openai==1.35.3
+# pgvector for PostgreSQL vector similarity (production only, requires PostgreSQL extension)
+# pgvector==0.2.5
 # asyncpg for PostgreSQL (optional, for production)
 # asyncpg==0.29.0
