@@ -8,10 +8,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '📊' },
-  { path: '/memories', label: 'Memories', icon: '📝' },
-  { path: '/search', label: 'Search', icon: '🔍' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/', label: 'Dashboard', icon: '📊', iconLabel: 'Dashboard chart' },
+  { path: '/memories', label: 'Memories', icon: '📝', iconLabel: 'Memories list' },
+  { path: '/search', label: 'Search', icon: '🔍', iconLabel: 'Search' },
+  { path: '/settings', label: 'Settings', icon: '⚙️', iconLabel: 'Settings gear' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
@@ -25,7 +25,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logo */}
         <div className="p-6 border-b border-dark-800">
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-2xl">🧠</span>
+            <span className="text-2xl" role="img" aria-label="Brain">🧠</span>
             Agent Memory Cloud
           </h1>
         </div>
@@ -44,7 +44,7 @@ export default function Layout({ children }: LayoutProps) {
                       : 'text-dark-300 hover:bg-dark-800 hover:text-white'
                   )}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-lg" role="img" aria-label={item.iconLabel}>{item.icon}</span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
@@ -57,8 +57,9 @@ export default function Layout({ children }: LayoutProps) {
           <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
+            aria-label="Logout"
           >
-            <span className="text-lg">🚪</span>
+            <span className="text-lg" role="img" aria-label="Door">🚪</span>
             <span className="font-medium">Logout</span>
           </button>
         </div>

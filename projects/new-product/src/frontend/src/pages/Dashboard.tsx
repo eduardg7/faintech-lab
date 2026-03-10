@@ -35,6 +35,7 @@ export default function Dashboard() {
           title="Total Memories"
           value={analytics.total_memories.toLocaleString()}
           icon="📝"
+          iconLabel="Notes"
           trend={`+${analytics.growth_rate}%`}
           trendLabel="this week"
         />
@@ -42,6 +43,7 @@ export default function Dashboard() {
           title="Active Agents"
           value={analytics.top_agents.length.toString()}
           icon="🤖"
+          iconLabel="Robot"
           trend=""
           trendLabel=""
         />
@@ -49,6 +51,7 @@ export default function Dashboard() {
           title="Growth Rate"
           value={`${analytics.growth_rate}%`}
           icon="📈"
+          iconLabel="Chart trending up"
           trend="+2.3%"
           trendLabel="vs last week"
         />
@@ -56,6 +59,7 @@ export default function Dashboard() {
           title="Avg Importance"
           value={`${Math.round(analytics.top_agents.reduce((sum, a) => sum + a.avg_importance, 0) / analytics.top_agents.length)}%`}
           icon="⭐"
+          iconLabel="Star"
           trend=""
           trendLabel=""
         />
@@ -143,7 +147,7 @@ export default function Dashboard() {
               {analytics.top_agents.map((agent, index) => (
                 <tr key={agent.agent_id} className="text-dark-200">
                   <td className="py-3 flex items-center gap-3">
-                    <span className="text-lg">
+                    <span className="text-lg" role="img" aria-label={index === 0 ? 'Gold medal, first place' : index === 1 ? 'Silver medal, second place' : index === 2 ? 'Bronze medal, third place' : 'Agent'}>
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🤖'}
                     </span>
                     <span className="font-medium">{agent.agent_id}</span>
@@ -155,6 +159,11 @@ export default function Dashboard() {
                         <div 
                           className="h-full bg-primary-500 rounded-full"
                           style={{ width: `${agent.avg_importance}%` }}
+                          role="progressbar"
+                          aria-valuenow={agent.avg_importance}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${agent.avg_importance}% average importance`}
                         />
                       </div>
                       <span className="text-sm text-dark-400">{Math.round(agent.avg_importance)}%</span>
@@ -170,19 +179,20 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ title, value, icon, trend, trendLabel }: {
+function StatCard({ title, value, icon, iconLabel, trend, trendLabel }: {
   title: string
   value: string
   icon: string
+  iconLabel: string
   trend: string
   trendLabel: string
 }) {
   return (
     <div className="bg-dark-900 rounded-xl p-6 border border-dark-800">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-2xl">{icon}</span>
+        <span className="text-2xl" role="img" aria-label={iconLabel}>{icon}</span>
         {trend && (
-          <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded">
+          <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded" aria-label={`Trend: ${trend}`}>
             {trend}
           </span>
         )}

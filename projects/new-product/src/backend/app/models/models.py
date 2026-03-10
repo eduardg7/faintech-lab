@@ -35,7 +35,7 @@ class Agent(Base):
     name = Column(String(255), nullable=False)
     agent_type = Column(String(100), nullable=False)  # e.g., "claude", "gpt", "custom"
     metadata_json = Column(Text, nullable=True)  # JSON blob for agent-specific metadata
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, server_default='1')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -52,7 +52,7 @@ class Memory(Base):
     agent_id = Column(String, ForeignKey("agents.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
     memory_type = Column(String(50), nullable=False)  # e.g., "episodic", "semantic", "procedural"
-    importance_score = Column(Integer, default=0)  # 0-100 importance rating
+    importance_score = Column(Integer, default=0, server_default='0')  # 0-100 importance rating
     metadata_json = Column(Text, nullable=True)  # JSON blob for memory metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -69,7 +69,7 @@ class ApiKey(Base):
     workspace_id = Column(String, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     key_hash = Column(String(255), nullable=False, unique=True, index=True)
     name = Column(String(255), nullable=False)  # Human-readable name
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, server_default='1')
     last_used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     revoked_at = Column(DateTime, nullable=True)

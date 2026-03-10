@@ -29,7 +29,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Include routers
-app.include_router(health.router, tags=["Health"])
+from app.api import api_router
+
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/")
