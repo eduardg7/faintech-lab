@@ -15,9 +15,9 @@ from locust.runners import MasterRunner, WorkerRunner
 
 class AMCUser(HttpUser):
     """Simulates AMC API user performing memory operations."""
-    
+
     wait_time = between(0.5, 2.0)
-    
+
     # Test data pool
     sample_contents = [
         "Agent session context: user authentication successful, preferences loaded",
@@ -31,7 +31,7 @@ class AMCUser(HttpUser):
         "Quality gate: all tests passing, code coverage 87%",
         "Deployment status: production release v1.2.3 successful"
     ]
-    
+
     sample_tags = [
         ["authentication", "security"],
         ["trading", "signals"],
@@ -44,13 +44,13 @@ class AMCUser(HttpUser):
         ["quality", "testing"],
         ["deployment", "release"]
     ]
-    
+
     def on_start(self):
         """Initialize user session."""
         self.agent_ids = []
         self.memory_ids = []
         self.api_key = "test-api-key-load-test"
-        
+
         # Get list of agents for testing
         with self.client.get(
             "/v1/agents",
@@ -63,19 +63,19 @@ class AMCUser(HttpUser):
             else:
                 # If no agents exist, we'll create them during the test
                 self.agent_ids = []
-    
+
     @task(10)
     def health_check(self):
         """Health check endpoint - lightweight baseline."""
         self.client.get("/health", name="/health")
-    
+
     @task(30)
     def create_memory(self):
         """Create a new memory entry."""
         agent_id = random.choice(self.agent_ids) if self.agent_ids else "test-agent"
         content = random.choice(self.sample_contents)
         tags = random.choice(self.sample_tags)
-        
+
         payload = {
             "agent_id": agent_id,
             "content": content,
@@ -85,7 +85,7 @@ class AMCUser(HttpUser):
             },
             "tags": tags
         }
-        
+
         with self.client.post(
             "/v1/memories",
             json=payload,
@@ -104,38 +104,38 @@ class AMCUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Failed to create memory: {response.status_code}")
-    
+
     @task(20)
     def get_memory(self):
         """Retrieve a specific memory."""
         if not self.memory_ids:
             return
-        
+
         memory_id = random.choice(self.memory_ids)
         self.client.get(
             f"/v1/memories/{memory_id}",
             headers={"X-API-Key": self.api_key},
             name="/v1/memories/[id] [GET]"
         )
-    
+
     @task(25)
     def search_memories_keyword(self):
         """Keyword search across memories."""
         search_terms = ["authentication", "trading", "error", "performance", "agent"]
         query = random.choice(search_terms)
-        
+
         params = {
             "query": query,
             "limit": 10
         }
-        
+
         self.client.get(
             "/v1/search",
             params=params,
             headers={"X-API-Key": self.api_key},
             name="/v1/search [keyword]"
         )
-    
+
     @task(15)
     def search_memories_semantic(self):
         """Semantic search using vector embeddings."""
@@ -147,12 +147,12 @@ class AMCUser(HttpUser):
             "Agent coordination patterns"
         ]
         query = random.choice(queries)
-        
+
         payload = {
             "query": query,
             "limit": 5
         }
-        
+
         with self.client.post(
             "/v1/search/semantic",
             json=payload,
@@ -167,7 +167,7 @@ class AMCUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Semantic search failed: {response.status_code}")
-    
+
     @task(5)
     def list_agents(self):
         """List all agents."""
@@ -176,31 +176,31 @@ class AMCUser(HttpUser):
             headers={"X-API-Key": self.api_key},
             name="/v1/agents [GET]"
         )
-    
+
     @task(5)
     def get_agent_memories(self):
         """Get memories for a specific agent."""
         if not self.agent_ids:
             return
-        
+
         agent_id = random.choice(self.agent_ids)
         params = {"limit": 20}
-        
+
         self.client.get(
             f"/v1/agents/{agent_id}/memories",
             params=params,
             headers={"X-API-Key": self.api_key},
             name="/v1/agents/[id]/memories [GET]"
         )
-    
+
     @task(3)
     def compact_memory(self):
         """Compact memory for an agent."""
         if not self.agent_ids:
             return
-        
+
         agent_id = random.choice(self.agent_ids)
-        
+
         with self.client.post(
             f"/v1/agents/{agent_id}/compact",
             headers={"X-API-Key": self.api_key},
@@ -211,7 +211,7 @@ class AMCUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Compact failed: {response.status_code}")
-    
+
     @task(2)
     def get_metrics(self):
         """Get API metrics - observability check."""
@@ -226,15 +226,15 @@ class HighThroughputUser(AMCUser):
 
 class ReadOnlyUser(AMCUser):
     """Read-only user for search-heavy workloads."""
-    
+
     @task(50)
     def search_memories_keyword(self):
         super().search_memories_keyword()
-    
+
     @task(30)
     def get_memory(self):
         super().get_memory()
-    
+
     @task(20)
     def list_agents(self):
         super().list_agents()
@@ -256,7 +256,7 @@ def on_test_stop(environment, **kwargs):
     """Log test completion and results."""
     print(f"\n{'='*80}")
     print(f"AMC Load Test Completed")
-    
+
     if isinstance(environment.runner, (MasterRunner, WorkerRunner)):
         # Distributed mode - stats available on master
         pass
