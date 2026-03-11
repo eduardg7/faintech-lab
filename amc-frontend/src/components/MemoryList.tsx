@@ -192,11 +192,11 @@ export default function MemoryList() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${getTypeColor(
-                      memory.type
+                      memory.memory_type
                     )}`}
-                    aria-label={`Memory type: ${memory.type}`}
+                    aria-label={`Memory type: ${memory.memory_type}`}
                   >
-                    {memory.type}
+                    {memory.memory_type}
                   </span>
                   <span className="text-xs text-gray-500" aria-label={`Agent ID: ${memory.agent_id}`}>
                     {memory.agent_id}
