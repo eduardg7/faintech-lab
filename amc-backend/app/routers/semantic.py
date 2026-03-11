@@ -9,6 +9,7 @@ import time
 import numpy as np
 
 from app.core.database import get_db
+from app.core.cache import get_cache_service
 from app.core.jobs import JobQueue, get_job_queue
 from app.models.memory import Memory
 from app.services.embedding import get_embedding_service
@@ -22,6 +23,8 @@ class SemanticSearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000, description="Search query text")
     limit: int = Field(10, ge=1, le=50, description="Max results to return")
     min_similarity: float = Field(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)")
+    page: int = Field(1, ge=1, description="Page number")
+    page_size: int = Field(10, ge=1, le=50, description="Items per page")
 
 
 class SemanticSearchResult(BaseModel):
@@ -38,10 +41,15 @@ class SemanticSearchResult(BaseModel):
 
 
 class SemanticSearchResponse(BaseModel):
-    """Semantic search response."""
+    """Semantic search response with pagination."""
     results: List[SemanticSearchResult]
+    total: int = Field(..., description="Total matching results")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Items per page")
+    has_next: bool = Field(..., description="Whether more results exist")
     query_time_ms: float = Field(..., description="Query execution time in milliseconds")
     query_embedding_time_ms: float = Field(..., description="Time to generate query embedding")
+    cache_hit: bool = Field(False, description="Whether embedding was served from cache")
 
 
 class EmbedJobRequest(BaseModel):
@@ -74,12 +82,23 @@ async def semantic_search(
     Returns results ranked by cosine similarity to query embedding.
     """
     start_time = time.perf_counter()
+    cache = get_cache_service()
     
-    # Generate embedding for query
+    # Try to get cached embedding first
     embed_start = time.perf_counter()
-    embedding_service = get_embedding_service()
-    query_embedding_result = await embedding_service.embed_text(request.query)
-    query_embedding = query_embedding_result['embedding']
+    cache_hit = False
+    query_embedding = await cache.get_embedding(request.query)
+    
+    if query_embedding is None:
+        # Generate embedding for query
+        embedding_service = get_embedding_service()
+        query_embedding_result = await embedding_service.embed_text(request.query)
+        query_embedding = query_embedding_result['embedding']
+        # Cache the embedding for future use
+        await cache.set_embedding(request.query, query_embedding)
+    else:
+        cache_hit = True
+    
     embedding_time = (time.perf_counter() - embed_start) * 1000
     
     # TODO: Migrate to pgvector for production (TD-015)
@@ -111,13 +130,20 @@ async def semantic_search(
                 if similarity >= request.min_similarity:
                     scored_memories.append((memory, similarity))
 
-    # Sort by similarity (descending) and limit
+    # Sort by similarity (descending)
     scored_memories.sort(key=lambda x: x[1], reverse=True)
-    scored_memories = scored_memories[:request.limit]
+    
+    # Calculate total before pagination
+    total = len(scored_memories)
+    
+    # Apply pagination
+    offset = (request.page - 1) * request.page_size
+    paginated_memories = scored_memories[offset:offset + request.page_size]
+    has_next = (offset + request.page_size) < total
 
     # Convert to response format
     search_results = []
-    for memory, similarity in scored_memories:
+    for memory, similarity in paginated_memories:
         search_results.append(SemanticSearchResult(
             id=memory.id,
             workspace_id=memory.workspace_id,
@@ -135,8 +161,13 @@ async def semantic_search(
 
     return SemanticSearchResponse(
         results=search_results,
+        total=total,
+        page=request.page,
+        page_size=request.page_size,
+        has_next=has_next,
         query_time_ms=round(query_time_ms, 2),
-        query_embedding_time_ms=round(embedding_time, 2)
+        query_embedding_time_ms=round(embedding_time, 2),
+        cache_hit=cache_hit
     )
 
 
