@@ -8,15 +8,18 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.security import (
+    API_KEY_PREFIX,
     hash_password,
     verify_password,
     create_access_token,
     create_refresh_token,
+    hash_api_key,
     verify_token,
     TokenData,
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from app.core.errors import AMCError, ValidationError, NotFoundError
+from app.models.api_key import ApiKey
 from app.models.user import User, RefreshToken
 from app.models.workspace import Workspace
 from app.schemas.auth import (
@@ -35,39 +38,116 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
 
 
+class AuthContext:
+    """Workspace-scoped authentication context for JWT or API key auth."""
+
+    def __init__(
+        self,
+        workspace_id: str,
+        user: Optional[User] = None,
+        api_key: Optional[ApiKey] = None,
+    ):
+        self.workspace_id = workspace_id
+        self.user = user
+        self.api_key = api_key
+
+    @property
+    def auth_type(self) -> str:
+        return "api_key" if self.api_key else "jwt"
+
+
+def _credentials_exception() -> HTTPException:
+    """Standard bearer-auth failure response."""
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def _get_active_user_from_access_token(
+    token: str,
+    db: AsyncSession,
+) -> Optional[User]:
+    """Resolve a valid JWT access token to an active user."""
+    token_data = TokenData.from_token(token, expected_type="access")
+    if not token_data:
+        return None
+
+    query = select(User).where(
+        and_(User.id == token_data.user_id, User.is_active == True)
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def _get_api_key_context(
+    raw_key: str,
+    db: AsyncSession,
+) -> Optional[AuthContext]:
+    """Resolve a valid API key to a workspace auth context."""
+    query = (
+        select(ApiKey, Workspace)
+        .join(Workspace, Workspace.id == ApiKey.workspace_id)
+        .where(
+            and_(
+                ApiKey.key_hash == hash_api_key(raw_key),
+                Workspace.deleted_at.is_(None),
+            )
+        )
+    )
+    result = await db.execute(query)
+    row = result.first()
+
+    if not row:
+        return None
+
+    api_key, workspace = row
+    if not api_key.is_valid:
+        return None
+
+    api_key.last_used_at = datetime.utcnow()
+    await db.flush()
+
+    return AuthContext(workspace_id=workspace.id, api_key=api_key)
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """
-    Dependency to get the current authenticated user from JWT token.
-    
+    Dependency to get the current authenticated user from a JWT token.
+
     Raises:
         HTTPException: If token is invalid or user not found
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     token = credentials.credentials
-    token_data = TokenData.from_token(token, expected_type="access")
-    
-    if not token_data:
-        raise credentials_exception
-    
-    # Get user from database
-    query = select(User).where(
-        and_(User.id == token_data.user_id, User.is_active == True)
-    )
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-    
+    user = await _get_active_user_from_access_token(token, db)
     if not user:
-        raise credentials_exception
-    
+        raise _credentials_exception()
+
     return user
+
+
+async def get_current_auth_context(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> AuthContext:
+    """Dependency to authenticate with either JWT access token or API key."""
+    token = credentials.credentials
+
+    if token.startswith(API_KEY_PREFIX):
+        auth_context = await _get_api_key_context(token, db)
+        if auth_context:
+            return auth_context
+        raise _credentials_exception()
+
+    user = await _get_active_user_from_access_token(token, db)
+    if not user:
+        raise _credentials_exception()
+
+    return AuthContext(workspace_id=user.workspace_id, user=user)
 
 
 @router.post(
@@ -82,7 +162,7 @@ async def register(
 ):
     """
     Register a new user account.
-    
+
     - **email**: User email address (unique)
     - **password**: Password (min 8 characters)
     - **full_name**: Optional full name
@@ -96,7 +176,7 @@ async def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered"
         )
-    
+
     # Create or get workspace
     workspace_id: str
     if user_data.workspace_name:
@@ -119,7 +199,7 @@ async def register(
         db.add(workspace)
         await db.flush()
         workspace_id = workspace.id
-    
+
     # Create user
     user = User(
         workspace_id=workspace_id,
@@ -131,7 +211,7 @@ async def register(
     )
     db.add(user)
     await db.flush()
-    
+
     # Create tokens
     access_token = create_access_token(
         subject=user.id,
@@ -142,7 +222,7 @@ async def register(
         subject=user.id,
         workspace_id=user.workspace_id
     )
-    
+
     # Store refresh token
     refresh_token = RefreshToken(
         user_id=user.id,
@@ -152,7 +232,7 @@ async def register(
     )
     db.add(refresh_token)
     await db.commit()
-    
+
     return AuthResponse(
         access_token=access_token,
         refresh_token=refresh_token_str,
@@ -183,10 +263,10 @@ async def login(
 ):
     """
     Login with email and password.
-    
+
     - **email**: User email address
     - **password**: Password
-    
+
     Returns access token, refresh token, and user info.
     """
     # Find user by email
@@ -195,17 +275,17 @@ async def login(
     )
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Update last login
     user.last_login_at = datetime.utcnow()
-    
+
     # Create tokens
     access_token = create_access_token(
         subject=user.id,
@@ -216,7 +296,7 @@ async def login(
         subject=user.id,
         workspace_id=user.workspace_id
     )
-    
+
     # Store refresh token with device info
     refresh_token = RefreshToken(
         user_id=user.id,
@@ -228,7 +308,7 @@ async def login(
     )
     db.add(refresh_token)
     await db.commit()
-    
+
     return AuthResponse(
         access_token=access_token,
         refresh_token=refresh_token_str,
@@ -258,25 +338,25 @@ async def refresh_token(
 ):
     """
     Refresh access token using refresh token.
-    
+
     - **refresh_token**: Valid refresh token
-    
+
     Returns new access token and refresh token.
     """
     # Verify refresh token
     token_data = TokenData.from_token(data.refresh_token, expected_type="refresh")
-    
+
     if not token_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Check if token is revoked in database
     import hashlib
     token_hash = hashlib.sha256(data.refresh_token.encode()).hexdigest()
-    
+
     query = select(RefreshToken).where(
         and_(
             RefreshToken.token_hash == token_hash,
@@ -285,29 +365,29 @@ async def refresh_token(
     )
     result = await db.execute(query)
     stored_token = result.scalar_one_or_none()
-    
+
     if not stored_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token revoked or expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Get user
     user_query = select(User).where(User.id == token_data.user_id)
     user_result = await db.execute(user_query)
     user = user_result.scalar_one_or_none()
-    
+
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Revoke old refresh token (rotation)
     stored_token.revoke()
-    
+
     # Create new tokens
     access_token = create_access_token(
         subject=user.id,
@@ -318,7 +398,7 @@ async def refresh_token(
         subject=user.id,
         workspace_id=user.workspace_id
     )
-    
+
     # Store new refresh token
     new_refresh_token = RefreshToken(
         user_id=user.id,
@@ -328,7 +408,7 @@ async def refresh_token(
     )
     db.add(new_refresh_token)
     await db.commit()
-    
+
     return TokenResponse(
         access_token=access_token,
         refresh_token=new_refresh_token_str,
@@ -349,16 +429,16 @@ async def logout(
 ):
     """
     Logout and revoke refresh token.
-    
+
     - **refresh_token**: Optional refresh token to revoke
-    
+
     If no refresh token provided, revokes all user's refresh tokens.
     """
     if data.refresh_token:
         # Revoke specific token
         import hashlib
         token_hash = hashlib.sha256(data.refresh_token.encode()).hexdigest()
-        
+
         query = select(RefreshToken).where(
             and_(
                 RefreshToken.token_hash == token_hash,
@@ -367,7 +447,7 @@ async def logout(
         )
         result = await db.execute(query)
         stored_token = result.scalar_one_or_none()
-        
+
         if stored_token:
             stored_token.revoke()
     else:
@@ -380,12 +460,12 @@ async def logout(
         )
         result = await db.execute(query)
         tokens = result.scalars().all()
-        
+
         for token in tokens:
             token.revoke()
-    
+
     await db.commit()
-    
+
     return MessageResponse(message="Successfully logged out")
 
 
@@ -399,7 +479,7 @@ async def get_me(
 ):
     """
     Get current authenticated user info.
-    
+
     Requires valid JWT access token in Authorization header.
     """
     return UserResponse(
