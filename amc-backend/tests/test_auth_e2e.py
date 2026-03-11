@@ -61,15 +61,15 @@ async def client(test_session):
     """Create test client with database override."""
     async def override_get_db():
         yield test_session
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test"
     ) as ac:
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -77,7 +77,7 @@ async def client(test_session):
 async def test_user(test_session: AsyncSession) -> dict:
     """Create a test user and return credentials."""
     from app.core.security import hash_password
-    
+
     # Create workspace
     workspace = Workspace(
         name="Test Workspace",
@@ -86,7 +86,7 @@ async def test_user(test_session: AsyncSession) -> dict:
     )
     test_session.add(workspace)
     await test_session.flush()
-    
+
     # Create user
     user = User(
         workspace_id=workspace.id,
@@ -98,7 +98,7 @@ async def test_user(test_session: AsyncSession) -> dict:
     )
     test_session.add(user)
     await test_session.commit()
-    
+
     return {
         "id": user.id,
         "email": "test@example.com",
@@ -109,9 +109,9 @@ async def test_user(test_session: AsyncSession) -> dict:
 
 class TestAuthRegisterE2E:
     """E2E tests for registration flow."""
-    
+
     @pytest.mark.asyncio
-    async def test_register_success(self, client: AsyncClient):
+    async def test_register_success(self, client: AsyncClient, test_session: AsyncSession):
         """Test successful user registration."""
         response = await client.post("/v1/auth/register", json={
             "email": "newuser@example.com",
@@ -119,22 +119,27 @@ class TestAuthRegisterE2E:
             "full_name": "New User",
             "workspace_name": "My Workspace"
         })
-        
+
         assert response.status_code == 201
         data = response.json()
-        
+
         # Should return access and refresh tokens
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
         assert "expires_in" in data
         assert "user" in data
-        
+
         # User info should be correct
         assert data["user"]["email"] == "newuser@example.com"
         assert data["user"]["full_name"] == "New User"
         assert data["user"]["is_active"] is True
-    
+
+        refresh_token = (
+            await test_session.execute(select(RefreshToken).limit(1))
+        ).scalar_one()
+        assert refresh_token.expires_at.tzinfo is None
+
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, client: AsyncClient, test_user: dict):
         """Test registration with duplicate email returns 409."""
@@ -143,10 +148,10 @@ class TestAuthRegisterE2E:
             "password": "AnotherPass123!",
             "full_name": "Another User"
         })
-        
+
         assert response.status_code == 409
         assert "already registered" in response.json()["detail"].lower()
-    
+
     @pytest.mark.asyncio
     async def test_register_invalid_email(self, client: AsyncClient):
         """Test registration with invalid email returns 422."""
@@ -154,9 +159,9 @@ class TestAuthRegisterE2E:
             "email": "not-an-email",
             "password": "password123"
         })
-        
+
         assert response.status_code == 422
-    
+
     @pytest.mark.asyncio
     async def test_register_short_password(self, client: AsyncClient):
         """Test registration with short password returns 422."""
@@ -164,13 +169,13 @@ class TestAuthRegisterE2E:
             "email": "user@example.com",
             "password": "short"
         })
-        
+
         assert response.status_code == 422
 
 
 class TestAuthLoginE2E:
     """E2E tests for login flow."""
-    
+
     @pytest.mark.asyncio
     async def test_login_success(self, client: AsyncClient, test_user: dict):
         """Test successful login returns tokens and user info."""
@@ -178,18 +183,18 @@ class TestAuthLoginE2E:
             "email": test_user["email"],
             "password": test_user["password"]
         })
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         # Should return tokens
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        
+
         # User info should match
         assert data["user"]["email"] == test_user["email"]
-    
+
     @pytest.mark.asyncio
     async def test_login_invalid_password(self, client: AsyncClient, test_user: dict):
         """Test login with wrong password returns 401."""
@@ -197,10 +202,10 @@ class TestAuthLoginE2E:
             "email": test_user["email"],
             "password": "wrongpassword"
         })
-        
+
         assert response.status_code == 401
         assert "invalid" in response.json()["detail"].lower()
-    
+
     @pytest.mark.asyncio
     async def test_login_nonexistent_user(self, client: AsyncClient):
         """Test login with non-existent email returns 401."""
@@ -208,22 +213,22 @@ class TestAuthLoginE2E:
             "email": "nonexistent@example.com",
             "password": "anypassword"
         })
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_login_missing_fields(self, client: AsyncClient):
         """Test login with missing fields returns 422."""
         response = await client.post("/v1/auth/login", json={
             "email": "test@example.com"
         })
-        
+
         assert response.status_code == 422
 
 
 class TestAuthRefreshE2E:
     """E2E tests for token refresh flow."""
-    
+
     @pytest.mark.asyncio
     async def test_refresh_success(self, client: AsyncClient, test_user: dict):
         """Test successful token refresh."""
@@ -233,33 +238,33 @@ class TestAuthRefreshE2E:
             "password": test_user["password"]
         })
         refresh_token = login_response.json()["refresh_token"]
-        
+
         # Refresh the token
         response = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh_token
         })
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         # Should return new tokens
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        
+
         # New tokens should be different
         assert data["access_token"] != login_response.json()["access_token"]
         assert data["refresh_token"] != refresh_token
-    
+
     @pytest.mark.asyncio
     async def test_refresh_invalid_token(self, client: AsyncClient):
         """Test refresh with invalid token returns 401."""
         response = await client.post("/v1/auth/refresh", json={
             "refresh_token": "invalid.token.here"
         })
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_refresh_access_token_rejected(self, client: AsyncClient, test_user: dict):
         """Test that access token cannot be used for refresh."""
@@ -269,14 +274,14 @@ class TestAuthRefreshE2E:
             "password": test_user["password"]
         })
         access_token = login_response.json()["access_token"]
-        
+
         # Try to use access token for refresh (should fail)
         response = await client.post("/v1/auth/refresh", json={
             "refresh_token": access_token
         })
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_refresh_token_rotation(self, client: AsyncClient, test_user: dict):
         """Test that old refresh token is revoked after rotation."""
@@ -286,13 +291,13 @@ class TestAuthRefreshE2E:
             "password": test_user["password"]
         })
         old_refresh_token = login_response.json()["refresh_token"]
-        
+
         # First refresh - should succeed
         refresh1 = await client.post("/v1/auth/refresh", json={
             "refresh_token": old_refresh_token
         })
         assert refresh1.status_code == 200
-        
+
         # Try to use old token again - should fail (rotation)
         refresh2 = await client.post("/v1/auth/refresh", json={
             "refresh_token": old_refresh_token
@@ -302,7 +307,7 @@ class TestAuthRefreshE2E:
 
 class TestAuthLogoutE2E:
     """E2E tests for logout flow."""
-    
+
     @pytest.mark.asyncio
     async def test_logout_success(self, client: AsyncClient, test_user: dict):
         """Test successful logout revokes refresh token."""
@@ -313,32 +318,32 @@ class TestAuthLogoutE2E:
         })
         access_token = login_response.json()["access_token"]
         refresh_token = login_response.json()["refresh_token"]
-        
+
         # Logout with auth header
         response = await client.post(
             "/v1/auth/logout",
             json={"refresh_token": refresh_token},
             headers={"Authorization": f"Bearer {access_token}"}
         )
-        
+
         assert response.status_code == 200
         assert "logged out" in response.json()["message"].lower()
-        
+
         # Try to use revoked refresh token - should fail
         refresh_response = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh_token
         })
         assert refresh_response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_logout_requires_auth(self, client: AsyncClient):
         """Test logout requires authentication."""
         response = await client.post("/v1/auth/logout", json={
             "refresh_token": "sometoken"
         })
-        
+
         assert response.status_code in [401, 403]
-    
+
     @pytest.mark.asyncio
     async def test_logout_all_tokens(self, client: AsyncClient, test_user: dict):
         """Test logout without token revokes all user tokens."""
@@ -349,22 +354,22 @@ class TestAuthLogoutE2E:
         })
         access1 = login1.json()["access_token"]
         refresh1 = login1.json()["refresh_token"]
-        
+
         login2 = await client.post("/v1/auth/login", json={
             "email": test_user["email"],
             "password": test_user["password"]
         })
         refresh2 = login2.json()["refresh_token"]
-        
+
         # Logout without specifying token (should revoke all)
         response = await client.post(
             "/v1/auth/logout",
             json={},
             headers={"Authorization": f"Bearer {access1}"}
         )
-        
+
         assert response.status_code == 200
-        
+
         # Both refresh tokens should now be revoked
         refresh1_response = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh1
@@ -372,14 +377,14 @@ class TestAuthLogoutE2E:
         refresh2_response = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh2
         })
-        
+
         assert refresh1_response.status_code == 401
         assert refresh2_response.status_code == 401
 
 
 class TestProtectedRoutesE2E:
     """E2E tests for protected route access."""
-    
+
     @pytest.mark.asyncio
     async def test_me_endpoint_with_valid_token(self, client: AsyncClient, test_user: dict):
         """Test /me endpoint returns user info with valid token."""
@@ -389,24 +394,24 @@ class TestProtectedRoutesE2E:
             "password": test_user["password"]
         })
         access_token = login_response.json()["access_token"]
-        
+
         # Get current user
         response = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {access_token}"}
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == test_user["email"]
-    
+
     @pytest.mark.asyncio
     async def test_me_endpoint_without_token(self, client: AsyncClient):
         """Test /me endpoint rejects request without token."""
         response = await client.get("/v1/auth/me")
-        
+
         assert response.status_code in [401, 403]
-    
+
     @pytest.mark.asyncio
     async def test_me_endpoint_with_invalid_token(self, client: AsyncClient):
         """Test /me endpoint rejects invalid token."""
@@ -414,9 +419,9 @@ class TestProtectedRoutesE2E:
             "/v1/auth/me",
             headers={"Authorization": "Bearer invalid.token.here"}
         )
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_me_endpoint_with_expired_token(self, client: AsyncClient, test_user: dict):
         """Test /me endpoint rejects expired token."""
@@ -428,14 +433,14 @@ class TestProtectedRoutesE2E:
             email=test_user["email"],
             expires_delta=expired_delta
         )
-        
+
         response = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {expired_token}"}
         )
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_me_endpoint_with_refresh_token_rejected(self, client: AsyncClient, test_user: dict):
         """Test that refresh token cannot access protected routes."""
@@ -445,19 +450,19 @@ class TestProtectedRoutesE2E:
             "password": test_user["password"]
         })
         refresh_token = login_response.json()["refresh_token"]
-        
+
         # Try to access /me with refresh token
         response = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {refresh_token}"}
         )
-        
+
         assert response.status_code == 401
 
 
 class TestTokenExpirationE2E:
     """E2E tests for token expiration handling."""
-    
+
     @pytest.mark.asyncio
     async def test_access_token_expires(self, client: AsyncClient, test_user: dict):
         """Test that access token expires after configured time."""
@@ -469,24 +474,24 @@ class TestTokenExpirationE2E:
             email=test_user["email"],
             expires_delta=short_delta
         )
-        
+
         # Should work immediately
         response1 = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response1.status_code == 200
-        
+
         # Wait for expiration
         await asyncio.sleep(2)
-        
+
         # Should fail after expiration
         response2 = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response2.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_token_contains_correct_claims(self, client: AsyncClient, test_user: dict):
         """Test that token contains all required claims."""
@@ -496,11 +501,11 @@ class TestTokenExpirationE2E:
             "password": test_user["password"]
         })
         access_token = login_response.json()["access_token"]
-        
+
         # Decode and verify claims
         from app.core.security import decode_token
         payload = decode_token(access_token)
-        
+
         assert payload is not None
         assert payload["sub"] == test_user["id"]
         assert payload["workspace_id"] == test_user["workspace_id"]
@@ -513,7 +518,7 @@ class TestTokenExpirationE2E:
 
 class TestErrorScenariosE2E:
     """E2E tests for error scenarios."""
-    
+
     @pytest.mark.asyncio
     async def test_malformed_authorization_header(self, client: AsyncClient):
         """Test malformed authorization header returns 401 or 403."""
@@ -521,17 +526,17 @@ class TestErrorScenariosE2E:
             "/v1/auth/me",
             headers={"Authorization": "InvalidFormat token"}
         )
-        
+
         # Either 401 (unauthenticated) or 403 (forbidden) is acceptable
         assert response.status_code in [401, 403]
-    
+
     @pytest.mark.asyncio
     async def test_missing_authorization_header(self, client: AsyncClient):
         """Test missing authorization header returns 401."""
         response = await client.get("/v1/auth/me")
-        
+
         assert response.status_code in [401, 403]
-    
+
     @pytest.mark.asyncio
     async def test_empty_authorization_header(self, client: AsyncClient):
         """Test empty authorization header returns 401."""
@@ -539,9 +544,9 @@ class TestErrorScenariosE2E:
             "/v1/auth/me",
             headers={"Authorization": ""}
         )
-        
+
         assert response.status_code in [401, 403]
-    
+
     @pytest.mark.asyncio
     async def test_wrong_token_type_in_refresh(self, client: AsyncClient, test_user: dict):
         """Test using wrong token type for refresh returns 401."""
@@ -551,24 +556,24 @@ class TestErrorScenariosE2E:
             "password": test_user["password"]
         })
         access_token = login_response.json()["access_token"]
-        
+
         # Try to refresh with access token (wrong type)
         response = await client.post("/v1/auth/refresh", json={
             "refresh_token": access_token
         })
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_inactive_user_login_rejected(self, client: AsyncClient, test_session: AsyncSession):
         """Test that inactive user cannot login."""
         from app.core.security import hash_password
-        
+
         # Create inactive user
         workspace = Workspace(name="Test", slug="test", tier="pro")
         test_session.add(workspace)
         await test_session.flush()
-        
+
         user = User(
             workspace_id=workspace.id,
             email="inactive@example.com",
@@ -578,15 +583,15 @@ class TestErrorScenariosE2E:
         )
         test_session.add(user)
         await test_session.commit()
-        
+
         # Try to login
         response = await client.post("/v1/auth/login", json={
             "email": "inactive@example.com",
             "password": "password123"
         })
-        
+
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_concurrent_token_refresh(self, client: AsyncClient, test_user: dict):
         """Test sequential refresh with same token (second should fail after rotation)."""
@@ -596,13 +601,13 @@ class TestErrorScenariosE2E:
             "password": test_user["password"]
         })
         refresh_token = login_response.json()["refresh_token"]
-        
+
         # First refresh should succeed
         response1 = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh_token
         })
         assert response1.status_code == 200
-        
+
         # Second refresh with same token should fail (rotation)
         response2 = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh_token
@@ -612,7 +617,7 @@ class TestErrorScenariosE2E:
 
 class TestAuthFlowIntegration:
     """Full auth flow integration tests."""
-    
+
     @pytest.mark.asyncio
     async def test_full_auth_flow(self, client: AsyncClient):
         """Test complete auth flow: register -> login -> me -> refresh -> logout."""
@@ -625,7 +630,7 @@ class TestAuthFlowIntegration:
         assert register_response.status_code == 201
         access_token = register_response.json()["access_token"]
         refresh_token = register_response.json()["refresh_token"]
-        
+
         # 2. Access protected route
         me_response = await client.get(
             "/v1/auth/me",
@@ -633,7 +638,7 @@ class TestAuthFlowIntegration:
         )
         assert me_response.status_code == 200
         assert me_response.json()["email"] == "flow@example.com"
-        
+
         # 3. Refresh token
         refresh_response = await client.post("/v1/auth/refresh", json={
             "refresh_token": refresh_token
@@ -641,14 +646,14 @@ class TestAuthFlowIntegration:
         assert refresh_response.status_code == 200
         new_access_token = refresh_response.json()["access_token"]
         new_refresh_token = refresh_response.json()["refresh_token"]
-        
+
         # 4. Access protected route with new token
         me_response2 = await client.get(
             "/v1/auth/me",
             headers={"Authorization": f"Bearer {new_access_token}"}
         )
         assert me_response2.status_code == 200
-        
+
         # 5. Logout
         logout_response = await client.post(
             "/v1/auth/logout",
@@ -656,13 +661,13 @@ class TestAuthFlowIntegration:
             headers={"Authorization": f"Bearer {new_access_token}"}
         )
         assert logout_response.status_code == 200
-        
+
         # 6. Verify refresh token is revoked
         refresh_after_logout = await client.post("/v1/auth/refresh", json={
             "refresh_token": new_refresh_token
         })
         assert refresh_after_logout.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_login_logout_login_cycle(self, client: AsyncClient, test_user: dict):
         """Test login -> logout -> login cycle works correctly."""
@@ -674,7 +679,7 @@ class TestAuthFlowIntegration:
         assert login1.status_code == 200
         access1 = login1.json()["access_token"]
         refresh1 = login1.json()["refresh_token"]
-        
+
         # Logout
         logout = await client.post(
             "/v1/auth/logout",
@@ -682,7 +687,7 @@ class TestAuthFlowIntegration:
             headers={"Authorization": f"Bearer {access1}"}
         )
         assert logout.status_code == 200
-        
+
         # Login again
         login2 = await client.post("/v1/auth/login", json={
             "email": test_user["email"],
@@ -691,11 +696,11 @@ class TestAuthFlowIntegration:
         assert login2.status_code == 200
         access2 = login2.json()["access_token"]
         refresh2 = login2.json()["refresh_token"]
-        
+
         # New tokens should be different
         assert access2 != access1
         assert refresh2 != refresh1
-        
+
         # New tokens should work
         me_response = await client.get(
             "/v1/auth/me",
