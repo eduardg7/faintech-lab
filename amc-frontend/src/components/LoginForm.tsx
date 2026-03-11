@@ -10,7 +10,7 @@ export default function LoginForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!key.trim()) {
       setError('Please enter your API key');
       return;
@@ -36,9 +36,9 @@ export default function LoginForm() {
             Enter your API key to access the dashboard
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           <div>
-            <label htmlFor="api-key" className="sr-only">
+            <label htmlFor="api-key" className="block text-sm font-medium text-gray-700 mb-1">
               API Key
             </label>
             <input
@@ -47,6 +47,8 @@ export default function LoginForm() {
               type="password"
               autoComplete="off"
               required
+              aria-required="true"
+              aria-describedby={error ? "api-key-error" : undefined}
               className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-amc-primary focus:border-amc-primary focus:z-10 sm:text-sm"
               placeholder="amc_live_xxxxxxxxxxxxxxxxxxxx"
               value={key}
@@ -55,8 +57,9 @@ export default function LoginForm() {
           </div>
 
           {error && (
-            <div 
-              className="text-red-600 text-sm text-center" 
+            <div
+              id="api-key-error"
+              className="text-red-600 text-sm text-center"
               role="alert"
               aria-live="polite"
             >
