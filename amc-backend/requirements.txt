@@ -12,3 +12,6 @@ openai==1.35.3
 # asyncpg for PostgreSQL (optional, for production)
 # asyncpg==0.29.0
 numpy>=1.24.0,<2.0.0
+# JWT Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
