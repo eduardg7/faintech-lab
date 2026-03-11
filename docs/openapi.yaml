@@ -1,0 +1,842 @@
+openapi: 3.1.0
+info:
+  title: Agent Memory Cloud API
+  version: 1.0.0
+  description: |
+    Persistent memory infrastructure for AI agent fleets.
+    
+    The Agent Memory Cloud (AMC) provides a centralized memory system that allows
+    AI agents to store, retrieve, and search memories across sessions and projects.
+    
+    ## Key Features
+    - **Persistent Memory**: Store memories that survive across sessions
+    - **Semantic Search**: Find relevant memories using natural language queries
+    - **Agent & Project Organization**: Organize memories by agent and project
+    - **Memory Types**: Support for different memory types (outcome, learning, preference, decision)
+    - **Tagging & Metadata**: Flexible categorization system
+    
+    ## Authentication
+    All API endpoints require authentication using either:
+    - **API Key**: `X-API-Key` header
+    - **JWT Token**: `Authorization: Bearer <token>` header
+    
+    ## Rate Limits
+    - Standard tier: 100 requests/minute
+    - Pro tier: 1000 requests/minute
+    
+    ## Pagination
+    List endpoints support cursor-based pagination:
+    - `limit`: Number of items per page (default: 20, max: 100)
+    - `offset`: Offset for pagination (default: 0)
+    
+  contact:
+    name: Faintech Solutions
+    email: support@faintech.dev
+    url: https://faintech.dev
+  
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.faintech.dev/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+      
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+  schemas:
+    MemoryType:
+      type: string
+      enum:
+        - outcome
+        - learning
+        - preference
+        - decision
+      description: Type of memory entry
+      
+    Memory:
+      type: object
+      required:
+        - id
+        - agent_id
+        - memory_type
+        - content
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique memory identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+          
+        workspace_id:
+          type: string
+          format: uuid
+          description: Workspace ID
+          example: "550e8400-e29b-41d4-a716-446655440001"
+          
+        agent_id:
+          type: string
+          description: Agent that owns this memory
+          example: "agent-001"
+          
+        project_id:
+          type: string
+          nullable: true
+          description: Associated project
+          example: "project-001"
+          
+        memory_type:
+          $ref: '#/components/schemas/MemoryType'
+          
+        content:
+          type: string
+          maxLength: 10240
+          description: Memory content (max 10KB)
+          example: "Successfully implemented Redis caching for search optimization"
+          
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: Tags for categorization (max 10)
+          example: ["redis", "caching", "performance"]
+          
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+          example:
+            confidence: 0.95
+            source: "user_feedback"
+            
+        importance:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.5
+          description: Importance score (0.0 to 1.0)
+          
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    MemoryCreate:
+      type: object
+      required:
+        - agent_id
+        - memory_type
+        - content
+      properties:
+        agent_id:
+          type: string
+          description: Agent that owns this memory
+          
+        project_id:
+          type: string
+          nullable: true
+          description: Associated project
+          
+        memory_type:
+          $ref: '#/components/schemas/MemoryType'
+          
+        content:
+          type: string
+          maxLength: 10240
+          description: Memory content (max 10KB)
+          
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: Tags for categorization (max 10)
+          
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+
+    MemoryUpdate:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 10240
+          description: Updated memory content
+          
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: Updated tags
+          
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Updated metadata
+          
+        importance:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Updated importance score
+
+    MemoryListResponse:
+      type: object
+      properties:
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Memory'
+            
+        total:
+          type: integer
+          description: Total number of memories matching filters
+          
+        limit:
+          type: integer
+          description: Items per page
+          
+        offset:
+          type: integer
+          description: Current offset
+
+    Agent:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          description: Unique agent identifier
+          
+        name:
+          type: string
+          description: Agent name
+          
+        description:
+          type: string
+          nullable: true
+          description: Agent description
+          
+        created_at:
+          type: string
+          format: date-time
+          
+        updated_at:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          description: Unique project identifier
+          
+        name:
+          type: string
+          description: Project name
+          
+        description:
+          type: string
+          nullable: true
+          description: Project description
+          
+        created_at:
+          type: string
+          format: date-time
+          
+        updated_at:
+          type: string
+          format: date-time
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query (natural language or keywords)
+          
+        agent_id:
+          type: string
+          nullable: true
+          description: Filter by agent
+          
+        project_id:
+          type: string
+          nullable: true
+          description: Filter by project
+          
+        memory_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryType'
+          description: Filter by memory types
+          
+        tags:
+          type: array
+          items:
+            type: string
+          description: Filter by tags
+          
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Maximum results to return
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              memory:
+                $ref: '#/components/schemas/Memory'
+              score:
+                type: number
+                format: float
+                description: Relevance score (0.0 to 1.0)
+                
+        total:
+          type: integer
+          description: Total matching results
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+          
+        message:
+          type: string
+          description: Error message
+          
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+
+paths:
+  /memories:
+    get:
+      summary: List memories
+      description: Retrieve a paginated list of memories with optional filters
+      operationId: listMemories
+      tags:
+        - Memories
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+          description: Filter by agent ID
+          
+        - name: project_id
+          in: query
+          schema:
+            type: string
+          description: Filter by project ID
+          
+        - name: memory_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/MemoryType'
+          description: Filter by memory type
+          
+        - name: tag
+          in: query
+          schema:
+            type: string
+          description: Filter by tag (can be repeated)
+          
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in content
+          
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+          
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Offset for pagination
+          
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+                
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create memory
+      description: Create a new memory entry
+      operationId: createMemory
+      tags:
+        - Memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryCreate'
+            examples:
+              outcome:
+                summary: Outcome memory
+                value:
+                  agent_id: "agent-001"
+                  memory_type: "outcome"
+                  content: "Successfully deployed caching layer"
+                  tags: ["deployment", "caching"]
+                  
+      responses:
+        '201':
+          description: Memory created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+                
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /memories/{memory_id}:
+    get:
+      summary: Get memory
+      description: Retrieve a specific memory by ID
+      operationId: getMemory
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Memory ID
+          
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+                
+        '404':
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update memory
+      description: Update an existing memory
+      operationId: updateMemory
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Memory ID
+          
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryUpdate'
+              
+      responses:
+        '200':
+          description: Memory updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+                
+        '404':
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete memory
+      description: Delete a memory by ID
+      operationId: deleteMemory
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Memory ID
+          
+      responses:
+        '204':
+          description: Memory deleted successfully
+          
+        '404':
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /search/keyword:
+    post:
+      summary: Keyword search
+      description: Search memories using keywords
+      operationId: keywordSearch
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+              
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  /search/semantic:
+    post:
+      summary: Semantic search
+      description: Search memories using natural language queries with semantic understanding
+      operationId: semanticSearch
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            examples:
+              natural_language:
+                summary: Natural language query
+                value:
+                  query: "How did we optimize the search performance?"
+                  limit: 10
+                  
+      responses:
+        '200':
+          description: Search results with relevance scores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  /agents:
+    get:
+      summary: List agents
+      description: Retrieve all agents
+      operationId: listAgents
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+
+    post:
+      summary: Create agent
+      description: Create a new agent
+      operationId: createAgent
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  
+      responses:
+        '201':
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+
+  /projects:
+    get:
+      summary: List projects
+      description: Retrieve all projects
+      operationId: listProjects
+      tags:
+        - Projects
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+
+    post:
+      summary: Create project
+      description: Create a new project
+      operationId: createProject
+      tags:
+        - Projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /auth/register:
+    post:
+      summary: Register user
+      description: Create a new user account
+      operationId: registerUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+
+  /auth/login:
+    post:
+      summary: Login
+      description: Authenticate and get JWT tokens
+      operationId: login
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: "bearer"
+
+  /auth/refresh:
+    post:
+      summary: Refresh token
+      description: Refresh access token using refresh token
+      operationId: refreshToken
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+
+  /auth/logout:
+    post:
+      summary: Logout
+      description: Logout and invalidate tokens
+      operationId: logout
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logout successful
