@@ -73,9 +73,25 @@ class BillingService:
             workspace.stripe_customer_id = customer_id
             await self.db.flush()
 
-        # Get price ID for tier (would use env var in production)
-        price_id_env_key = TIER_PRICING[tier]["price_id"]
-        price_id = StripeConfig.get_frontend_url()  # Placeholder - should be env var
+        # Get price ID for tier from configured Stripe price IDs
+        if tier == "starter":
+            price_id = StripeConfig.STARTER_PRICE_ID
+        elif tier == "pro":
+            price_id = StripeConfig.PRO_PRICE_ID
+        else:
+            # This should not happen due to validation above
+            raise AMCError(
+                message=f"Unknown tier: {tier}",
+                code="invalid_tier",
+                status_code=400
+            )
+
+        if not price_id:
+            raise AMCError(
+                message=f"Stripe price ID not configured for tier: {tier}",
+                code="stripe_not_configured",
+                status_code=500
+            )
 
         # Create checkout session
         try:

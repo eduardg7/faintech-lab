@@ -7,7 +7,7 @@ from typing import Optional
 from app.core.database import get_db
 from app.core.stripe_config import StripeConfig
 from app.core.errors import AMCError, ValidationError
-from app.core.security import get_current_user, UserContext
+from app.routers.auth import get_current_user
 from app.models.user import User
 from app.schemas.billing import (
     CheckoutSessionRequest,
@@ -60,7 +60,7 @@ async def get_pricing() -> dict:
 @router.post("/checkout", response_model=CheckoutSessionResponse)
 async def create_checkout_session(
     request: CheckoutSessionRequest,
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -90,7 +90,7 @@ async def create_checkout_session(
 
 @router.get("/subscription", response_model=SubscriptionStatus)
 async def get_subscription_status(
-    current_user: UserContext = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get current subscription status for the workspace."""
@@ -115,6 +115,9 @@ async def stripe_webhook(
     - customer.subscription.created: New subscription activated
     - customer.subscription.updated: Subscription modified/cancelled
     - customer.subscription.deleted: Subscription cancelled
+
+    Security: Requires STRIPE_WEBHOOK_SECRET to be configured. Webhooks are rejected
+    without signature verification to prevent forged subscription lifecycle events.
     """
     if not StripeConfig.is_configured():
         raise HTTPException(
@@ -122,28 +125,32 @@ async def stripe_webhook(
             detail="Billing not configured"
         )
 
-    payload = await request.body()
     webhook_secret = StripeConfig.get_webhook_secret()
+    if not webhook_secret:
+        # Reject webhooks entirely when secret is not configured
+        # to prevent forged subscription events. Local test mode should configure
+        # STRIPE_WEBHOOK_SECRET explicitly or use Stripe CLI forwarding.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Webhook signature verification not configured - billing disabled"
+        )
 
-    if webhook_secret:
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, stripe_signature, webhook_secret
-            )
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid payload"
-            )
-        except stripe.error.SignatureVerificationError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid signature"
-            )
-    else:
-        # In development/test without webhook secret, parse directly
-        import json
-        event = json.loads(payload.decode())
+    payload = await request.body()
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, stripe_signature, webhook_secret
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid payload"
+        )
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid signature"
+        )
 
     # Process event
     billing_service = BillingService(db)
