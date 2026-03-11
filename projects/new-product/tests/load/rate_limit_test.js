@@ -1,70 +1,94 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate } from 'k6/metrics';
+import { Rate, Trend, Counter } from 'k6/metrics';
+
+const BASE_URL = (__ENV.BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+const AUTH_PREFIX = `${BASE_URL}/v1/auth`;
+const API_PREFIX = `${BASE_URL}/v1`;
+const TEST_PASSWORD = __ENV.TEST_PASSWORD || 'LoadTestPass123!';
+const TEST_RUN_ID = __ENV.TEST_RUN_ID || `lt-${Date.now()}`;
+
+function userEmail(vu) {
+  return `loadtest+${TEST_RUN_ID}-${vu}@example.com`;
+}
+
+function registerAndLogin(vu) {
+  const email = userEmail(vu);
+  const registerPayload = JSON.stringify({
+    email,
+    password: TEST_PASSWORD,
+    full_name: `Load Test User ${vu}`,
+    workspace_name: `Load Test Workspace ${TEST_RUN_ID}-${vu}`,
+  });
+
+  const commonParams = { headers: { 'Content-Type': 'application/json' } };
+  let registerRes = http.post(`${AUTH_PREFIX}/register`, registerPayload, commonParams);
+  if (![201, 409].includes(registerRes.status)) {
+    return { ok: false, token: null, user: null, registerStatus: registerRes.status };
+  }
+
+  const loginRes = http.post(
+    `${AUTH_PREFIX}/login`,
+    JSON.stringify({ email, password: TEST_PASSWORD }),
+    commonParams,
+  );
+
+  if (loginRes.status !== 200) {
+    return { ok: false, token: null, user: null, loginStatus: loginRes.status };
+  }
+
+  const body = JSON.parse(loginRes.body);
+  return { ok: true, token: body.access_token, user: body.user };
+}
+
+function authHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 const errorRate = new Rate('errors');
 
-// Rate limit test configuration
-// Test the 1000 req/hour per API key limit
 export const options = {
   stages: [
-    // Ramp up to 50 users quickly
     { duration: '10s', target: 50 },
-    // Generate requests for 2 minutes to hit rate limit
     { duration: '2m', target: 50 },
-    // Ramp down
     { duration: '10s', target: 0 },
   ],
   thresholds: {
-    errors: ['rate<0.1'], // Allow up to 10% errors (expected 429s)
+    errors: ['rate<0.1'],
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-
 export default function () {
-  const agentId = `rate-test-agent-${__VU}`;
-  
+  const auth = registerAndLogin(__VU);
+  if (!auth.ok) {
+    errorRate.add(1);
+    return;
+  }
+
   const payload = JSON.stringify({
-    agent_id: agentId,
-    project_id: 'rate-test-project',
-    type: 'observation',
+    agent_id: `rate-test-agent-${__VU}`,
+    project_id: `rate-test-project-${Math.floor(__VU % 5)}`,
+    memory_type: 'observation',
     content: `Rate limit test ${Date.now()}`,
+    tags: ['rate-test'],
   });
 
-  const params = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
-
-  const res = http.post(`${BASE_URL}/api/v1/memories/`, payload, params);
-  
-  // Check for rate limiting (429 status)
+  const res = http.post(`${API_PREFIX}/memories`, payload, { headers: authHeaders(auth.token) });
   const isRateLimited = res.status === 429;
   const isSuccess = res.status === 201 || res.status === 200;
-  
+
   check(res, {
-    'status is 201, 200, or 429': (r) => isSuccess || isRateLimited,
+    'status is 201, 200, or 429': () => isSuccess || isRateLimited,
     'rate limit headers present': (r) => {
       const hasRateLimit = r.headers['X-RateLimit-Limit'] || r.headers['X-Ratelimit-Limit'];
       const hasRetryAfter = r.headers['Retry-After'] || r.headers['X-RateLimit-Reset'];
-      return isRateLimited ? (hasRetryAfter !== undefined) : true;
+      return isRateLimited ? hasRetryAfter !== undefined : hasRateLimit !== undefined || isSuccess;
     },
   });
 
-  // Track non-429 errors as actual errors
-  if (!isSuccess && !isRateLimited) {
-    errorRate.add(1);
-  }
-
-  // Small sleep to avoid overwhelming
+  if (!isSuccess && !isRateLimited) errorRate.add(1);
   sleep(0.1);
-}
-
-export function handleSummary(data) {
-  return {
-    'stdout': JSON.stringify(data, null, 2),
-    'rate-limit-test-results.json': JSON.stringify(data, null, 2),
-  };
 }
