@@ -94,6 +94,7 @@ export default function DashboardPage() {
     <div 
       className="min-h-screen bg-gray-50"
       role="main"
+      id="main-content"
       aria-label="Agent Memory Dashboard"
     >
       {/* Header */}
