@@ -49,7 +49,7 @@ class AMCUser(HttpUser):
         """Initialize user session."""
         self.agent_ids = []
         self.memory_ids = []
-        self.api_key = "test-api-key-load-test"
+        self.api_key = __import__("os").environ.get("AMC_LOADTEST_API_KEY", "test-api-key-load-test")
 
         # Get list of agents for testing
         with self.client.get(
