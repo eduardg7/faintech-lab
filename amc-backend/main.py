@@ -173,6 +173,7 @@ def create_app() -> FastAPI:
         search_router,
     )
     from app.routers.semantic import router as semantic_router
+    from app.routers.billing import router as billing_router
 
     app.include_router(memories_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
@@ -180,6 +181,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router, prefix=settings.api_v1_prefix)
     app.include_router(auth_router, prefix=settings.api_v1_prefix)
     app.include_router(api_keys_router, prefix=settings.api_v1_prefix)
+    app.include_router(billing_router, prefix=settings.api_v1_prefix)
 
     logger.info(
         "startup",
