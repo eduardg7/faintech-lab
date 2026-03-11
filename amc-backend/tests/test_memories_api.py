@@ -1,4 +1,9 @@
-"""Tests for Memory API endpoints."""
+"""Tests for Memory API endpoints.
+
+Note: All endpoints now require JWT authentication (R-LAB-002 agent isolation).
+Tests use an authenticated client fixture that includes a valid JWT token.
+"""
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -6,8 +11,10 @@ from sqlalchemy import select
 
 from main import app
 from app.core.database import Base, get_db
+from app.core.security import hash_password, create_access_token
 from app.models.memory import Memory
 from app.models.workspace import Workspace
+from app.models.user import User
 from datetime import datetime
 import json
 
@@ -35,34 +42,56 @@ async def db_session():
     """Create test database session."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async with TestSessionLocal() as session:
         # Create default workspace
         workspace = Workspace(
-            id="default-workspace",
-            name="Default Workspace",
-            slug="default-workspace"
+            id="default-workspace", name="Default Workspace", slug="default-workspace"
         )
         session.add(workspace)
+
+        # Create default user tied to the workspace
+        user = User(
+            id="default-user",
+            workspace_id="default-workspace",
+            email="test@memories.example.com",
+            password_hash=hash_password("Password123!"),
+            full_name="Test User",
+            is_active=True,
+            is_verified=True,
+        )
+        session.add(user)
         await session.commit()
         yield session
-    
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
-async def client(db_session):
-    """Create test client with database dependency override."""
+async def auth_token() -> str:
+    """Return a JWT token for the default test user."""
+    return create_access_token(
+        subject="default-user",
+        workspace_id="default-workspace",
+        email="test@memories.example.com",
+    )
+
+
+@pytest.fixture
+async def client(db_session, auth_token):
+    """Create test client with database dependency override and auth token."""
+
     async def override_get_db():
         yield db_session
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        ac.headers.update({"Authorization": f"Bearer {auth_token}"})
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -76,10 +105,10 @@ async def test_create_memory(client: AsyncClient):
             "memory_type": "learning",
             "content": "Test memory content",
             "tags": ["test", "example"],
-            "metadata": {"key": "value"}
-        }
+            "metadata": {"key": "value"},
+        },
     )
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["agent_id"] == "test-agent"
@@ -96,24 +125,27 @@ async def test_create_memory_exceeds_10kb(client: AsyncClient):
     """Test content validation rejects >10KB."""
     # Create content larger than 10KB
     large_content = "x" * 11000  # 11KB
-    
+
     response = await client.post(
         "/v1/memories",
         json={
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": large_content,
-            "tags": []
-        }
+            "tags": [],
+        },
     )
-    
+
     # Should reject with 422 (Pydantic validation) or 413 (router validation)
     assert response.status_code in [413, 422]
     detail = response.json()["detail"]
     # Handle both Pydantic array format and router string format
     if isinstance(detail, list):
         # Pydantic V2 error format: check for max_length constraint (10240 = 10KB)
-        assert any("10KB limit" in str(err) or "exceeds" in str(err) or "10240" in str(err) for err in detail)
+        assert any(
+            "10KB limit" in str(err) or "exceeds" in str(err) or "10240" in str(err)
+            for err in detail
+        )
     else:
         assert "10KB limit" in detail or "exceeds" in detail
 
@@ -129,10 +161,10 @@ async def test_list_memories(client: AsyncClient):
                 "agent_id": f"agent-{i % 2}",
                 "memory_type": "learning",
                 "content": f"Memory {i}",
-                "tags": ["test"]
-            }
+                "tags": ["test"],
+            },
         )
-    
+
     # Test list all
     response = await client.get("/v1/memories")
     assert response.status_code == 200
@@ -141,13 +173,13 @@ async def test_list_memories(client: AsyncClient):
     assert len(data["memories"]) == 5
     assert data["page"] == 1
     assert data["has_next"] is False
-    
+
     # Test filter by agent
     response = await client.get("/v1/memories?agent_id=agent-0")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 3  # agent-0 has 3 memories (indices 0, 2, 4)
-    
+
     # Test pagination
     response = await client.get("/v1/memories?page=1&page_size=2")
     assert response.status_code == 200
@@ -166,11 +198,11 @@ async def test_get_memory_by_id(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "decision",
             "content": "Test decision",
-            "tags": ["important"]
-        }
+            "tags": ["important"],
+        },
     )
     memory_id = create_response.json()["id"]
-    
+
     # Get by ID
     response = await client.get(f"/v1/memories/{memory_id}")
     assert response.status_code == 200
@@ -197,18 +229,15 @@ async def test_update_memory(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": "Original content",
-            "tags": ["original"]
-        }
+            "tags": ["original"],
+        },
     )
     memory_id = create_response.json()["id"]
-    
+
     # Update memory
     response = await client.patch(
         f"/v1/memories/{memory_id}",
-        json={
-            "content": "Updated content",
-            "tags": ["updated", "modified"]
-        }
+        json={"content": "Updated content", "tags": ["updated", "modified"]},
     )
     assert response.status_code == 200
     data = response.json()
@@ -227,25 +256,27 @@ async def test_update_memory_exceeds_10kb(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": "Original",
-            "tags": []
-        }
+            "tags": [],
+        },
     )
     memory_id = create_response.json()["id"]
-    
+
     # Try to update with large content
     large_content = "y" * 11000
     response = await client.patch(
-        f"/v1/memories/{memory_id}",
-        json={"content": large_content}
+        f"/v1/memories/{memory_id}", json={"content": large_content}
     )
-    
+
     # Should reject with 422 (Pydantic validation) or 413 (router validation)
     assert response.status_code in [413, 422]
     detail = response.json()["detail"]
     # Handle both Pydantic array format and router string format
     if isinstance(detail, list):
         # Pydantic V2 error format: check for max_length constraint (10240 = 10KB)
-        assert any("10KB limit" in str(err) or "exceeds" in str(err) or "10240" in str(err) for err in detail)
+        assert any(
+            "10KB limit" in str(err) or "exceeds" in str(err) or "10240" in str(err)
+            for err in detail
+        )
     else:
         assert "10KB limit" in detail or "exceeds" in detail
 
@@ -260,15 +291,15 @@ async def test_delete_memory(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": "To be deleted",
-            "tags": []
-        }
+            "tags": [],
+        },
     )
     memory_id = create_response.json()["id"]
-    
+
     # Delete memory
     response = await client.delete(f"/v1/memories/{memory_id}")
     assert response.status_code == 204
-    
+
     # Verify it's deleted (should return 404)
     response = await client.get(f"/v1/memories/{memory_id}")
     assert response.status_code == 404
@@ -284,8 +315,8 @@ async def test_search_memories(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": "Python is great for AI",
-            "tags": []
-        }
+            "tags": [],
+        },
     )
     await client.post(
         "/v1/memories",
@@ -293,10 +324,10 @@ async def test_search_memories(client: AsyncClient):
             "agent_id": "test-agent",
             "memory_type": "learning",
             "content": "JavaScript is versatile",
-            "tags": []
-        }
+            "tags": [],
+        },
     )
-    
+
     # Search for Python (case-insensitive)
     response = await client.get("/v1/memories?search=python")
     assert response.status_code == 200

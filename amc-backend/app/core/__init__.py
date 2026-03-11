@@ -1,4 +1,5 @@
 """Core package."""
+
 from app.core.jobs import JobQueue, get_job_queue
 from app.core.errors import (
     AMCError,
@@ -12,8 +13,10 @@ from app.core.errors import (
     ErrorResponse,
     amc_error_handler,
     generic_error_handler,
-    RetryConfig
+    RetryConfig,
 )
+from app.core.logging import setup_logging, get_logger
+from app.core.metrics import metrics_store, record_request
 
 __all__ = [
     "JobQueue",
@@ -29,5 +32,9 @@ __all__ = [
     "ErrorResponse",
     "amc_error_handler",
     "generic_error_handler",
-    "RetryConfig"
+    "RetryConfig",
+    "setup_logging",
+    "get_logger",
+    "metrics_store",
+    "record_request",
 ]
