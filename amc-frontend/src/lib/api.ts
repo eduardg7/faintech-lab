@@ -4,21 +4,25 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v
 
 export interface Memory {
   id: string;
+  workspace_id: string;
   agent_id: string;
+  task_id: string | null;
   project_id: string;
-  type: 'outcome' | 'learning' | 'preference' | 'decision';
+  memory_type: 'outcome' | 'learning' | 'preference' | 'decision';
   content: string;
   tags: string[];
+  metadata: Record<string, unknown>;
   importance: number;
   created_at: string;
+  updated_at: string | null;
 }
 
 export interface MemoriesResponse {
   memories: Memory[];
   total: number;
-  limit: number;
-  offset: number;
-  has_more: boolean;
+  page: number;
+  page_size: number;
+  has_next: boolean;
 }
 
 export interface SearchResponse {
@@ -61,7 +65,7 @@ export const api = {
       limit?: number;
     }
   ): Promise<SearchResponse> {
-    const response = await axios.get(`${API_BASE_URL}/memories/search`, {
+    const response = await axios.get(`${API_BASE_URL}/search/keyword`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
       },
