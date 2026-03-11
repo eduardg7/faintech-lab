@@ -2,11 +2,12 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { api, Memory } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useState } from 'react';
 import ErrorState from './ui/ErrorState';
 import LoadingState from './ui/LoadingState';
 import EmptyState from './ui/EmptyState';
+import OnboardingShell from './dashboard/OnboardingShell';
 
 export default function MemoryList() {
   const { apiKey, logout } = useAuth();
@@ -37,6 +38,18 @@ export default function MemoryList() {
     enabled: !!apiKey && searchQuery.length > 0,
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: () => api.getCurrentUser(apiKey!),
+    enabled: !!apiKey,
+  });
+
+  const { data: apiKeysData } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: () => api.listApiKeys(apiKey!),
+    enabled: !!apiKey,
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery) {
@@ -48,10 +61,23 @@ export default function MemoryList() {
 
   const memories = searchQuery ? searchData?.results.map((r) => r.memory) : data?.memories;
   const hasActiveFilters = searchQuery || selectedType || selectedAgent;
+  const showOnboardingShell =
+    !hasActiveFilters &&
+    !isLoading &&
+    !error &&
+    !!currentUser &&
+    memories !== undefined &&
+    memories.length === 0;
 
   const clearFilters = () => {
     setSelectedType('');
     setSelectedAgent('');
+    setSearchQuery('');
+  };
+
+  const prefillFirstMemory = () => {
+    setSelectedAgent('founder');
+    setSelectedType('learning');
     setSearchQuery('');
   };
 
@@ -87,7 +113,7 @@ export default function MemoryList() {
             Logout
           </button>
         </div>
-        <ErrorState 
+        <ErrorState
           message="We couldn't load your memories. Please check your connection and try again."
           onRetry={() => refetch()}
         />
@@ -96,7 +122,7 @@ export default function MemoryList() {
   }
 
   return (
-    <div 
+    <div
       className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       id="main-content"
       role="main"
@@ -180,7 +206,13 @@ export default function MemoryList() {
       </div>
 
       {/* Memory List */}
-      {memories && memories.length > 0 ? (
+      {showOnboardingShell ? (
+        <OnboardingShell
+          user={currentUser}
+          apiKeys={apiKeysData?.api_keys ?? []}
+          onPrefillMemory={prefillFirstMemory}
+        />
+      ) : memories && memories.length > 0 ? (
         <div className="space-y-4" role="list" aria-label="Memory list">
           {memories.map((memory) => (
             <article
@@ -192,17 +224,17 @@ export default function MemoryList() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${getTypeColor(
-                      memory.memory_type
+                      memory.type
                     )}`}
-                    aria-label={`Memory type: ${memory.memory_type}`}
+                    aria-label={`Memory type: ${memory.type}`}
                   >
-                    {memory.memory_type}
+                    {memory.type}
                   </span>
                   <span className="text-xs text-gray-500" aria-label={`Agent ID: ${memory.agent_id}`}>
                     {memory.agent_id}
                   </span>
                 </div>
-                <time 
+                <time
                   className="text-xs text-gray-400"
                   dateTime={memory.created_at}
                   aria-label={`Created at ${new Date(memory.created_at).toLocaleString()}`}
@@ -228,7 +260,7 @@ export default function MemoryList() {
           ))}
         </div>
       ) : (
-        <EmptyState 
+        <EmptyState
           hasFilters={!!hasActiveFilters}
           onClearFilters={clearFilters}
         />
