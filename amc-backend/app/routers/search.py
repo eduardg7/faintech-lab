@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 import time
 
 from app.core.database import get_db
+from app.core.cache import get_cache_service, CacheConfig
 from app.models.memory import Memory
 from app.schemas.memory import MemoryResponse
 
@@ -77,7 +78,24 @@ async def keyword_search(
     
     Note: On PostgreSQL, uses full-text search with GIN index.
     On SQLite, falls back to LIKE-based search.
+    
+    Results are cached for 5 minutes to improve response times.
     """
+    # Check cache first
+    cache = get_cache_service()
+    cached_results = await cache.get_search_results(
+        query=q,
+        agent_id=agent_id,
+        project_id=project_id,
+        tags=tags,
+        page=page,
+        page_size=page_size
+    )
+    
+    if cached_results:
+        # Return cached results
+        return SearchResponse(**cached_results)
+    
     start_time = time.perf_counter()
     
     is_postgresql = await _detect_postgresql(db)
@@ -171,7 +189,7 @@ async def keyword_search(
     # Calculate has_next
     has_next = (offset + page_size) < total
     
-    return SearchResponse(
+    response = SearchResponse(
         results=search_results,
         total=total,
         page=page,
@@ -179,6 +197,19 @@ async def keyword_search(
         has_next=has_next,
         query_time_ms=round(query_time_ms, 2)
     )
+    
+    # Cache results for future requests
+    await cache.set_search_results(
+        query=q,
+        agent_id=agent_id,
+        project_id=project_id,
+        tags=tags,
+        page=page,
+        page_size=page_size,
+        results=response.model_dump()
+    )
+    
+    return response
 
 
 @router.get(
