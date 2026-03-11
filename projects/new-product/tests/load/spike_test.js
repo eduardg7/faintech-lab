@@ -77,7 +77,7 @@ export default function () {
       JSON.stringify({
         agent_id: agentId,
         project_id: projectId,
-        memory_type: 'observation',
+        memory_type: 'learning',
         content: `Spike test ${Date.now()}`,
         tags: ['spike-test'],
         metadata: { vu: __VU, iter: __ITER },

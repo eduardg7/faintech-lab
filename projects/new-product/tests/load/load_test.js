@@ -99,7 +99,7 @@ function testCreateMemory(agentId, projectId, params) {
   const payload = JSON.stringify({
     agent_id: agentId,
     project_id: projectId,
-    memory_type: 'observation',
+    memory_type: 'learning',
     content: `Load test memory at ${new Date().toISOString()}`,
     tags: ['load-test', 'performance'],
     metadata: { test_run: true, vu: __VU, iter: __ITER },

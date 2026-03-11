@@ -71,7 +71,7 @@ export default function () {
   const payload = JSON.stringify({
     agent_id: `rate-test-agent-${__VU}`,
     project_id: `rate-test-project-${Math.floor(__VU % 5)}`,
-    memory_type: 'observation',
+    memory_type: 'learning',
     content: `Rate limit test ${Date.now()}`,
     tags: ['rate-test'],
   });
