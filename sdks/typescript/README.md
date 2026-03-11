@@ -134,7 +134,7 @@ const agent = await client.agents.create({
 
 // List all agents
 const agents = await client.agents.list();
-for (const agent of agents) {
+for (const agent of agents.items) {
   console.log(`${agent.id}: ${agent.name}`);
 }
 ```
@@ -172,7 +172,7 @@ const memory = await client.memories.create({
   content: string,              // Required: Memory content (max 10KB)
   projectId?: string,           // Optional: Project association
   tags?: string[],              // Optional: Tags (max 10)
-  metadata?: Record<string, any> // Optional: Additional metadata
+  metadata?: Record<string, unknown> // Optional: Additional metadata
 });
 ```
 
@@ -206,7 +206,7 @@ const memory = await client.memories.update({
   memoryId: 'memory-uuid',
   content: 'Updated content',
   tags: ['new-tag'],
-  importance: 0.9
+  confidence: 0.9
 });
 ```
 
@@ -214,6 +214,16 @@ const memory = await client.memories.update({
 
 ```typescript
 await client.memories.delete('memory-uuid');
+```
+
+#### Compact Memories
+
+```typescript
+const result = await client.memories.compact({
+  agentId: 'agent-001',
+  maxAgeDays: 30,
+});
+console.log(`Processed ${result.memoriesProcessed} memories`);
 ```
 
 ### Search
@@ -225,9 +235,8 @@ const results = await client.search.keyword({
   query: string,                     // Required: Search query
   agentId?: string,                  // Optional: Filter by agent
   projectId?: string,                // Optional: Filter by project
-  memoryTypes?: MemoryType[],        // Optional: Filter by types
   tags?: string[],                   // Optional: Filter by tags
-  limit?: number                     // Optional: Max results (default: 20)
+  limit?: number                     // Optional: Max results (default: 10)
 });
 ```
 
@@ -238,9 +247,8 @@ const results = await client.search.semantic({
   query: string,                     // Required: Natural language query
   agentId?: string,                  // Optional: Filter by agent
   projectId?: string,                // Optional: Filter by project
-  memoryTypes?: MemoryType[],        // Optional: Filter by types
   tags?: string[],                   // Optional: Filter by tags
-  limit?: number                     // Optional: Max results (default: 20)
+  limit?: number                     // Optional: Max results (default: 5)
 });
 ```
 
@@ -258,15 +266,6 @@ const agents = await client.agents.list();
 
 // Get agent
 const agent = await client.agents.get('agent-id');
-
-// Update agent
-const agent = await client.agents.update({
-  agentId: 'agent-id',
-  name: 'New Name'
-});
-
-// Delete agent
-await client.agents.delete('agent-id');
 ```
 
 ### Projects
@@ -283,15 +282,6 @@ const projects = await client.projects.list();
 
 // Get project
 const project = await client.projects.get('project-id');
-
-// Update project
-const project = await client.projects.update({
-  projectId: 'project-id',
-  name: 'New Name'
-});
-
-// Delete project
-await client.projects.delete('project-id');
 ```
 
 ## Advanced Usage
@@ -306,10 +296,10 @@ const limit = 50;
 const allMemories = [];
 
 while (true) {
-  const memories = await client.memories.list({ limit, offset });
-  allMemories.push(...memories);
+  const response = await client.memories.list({ limit, offset });
+  allMemories.push(...response.items);
   
-  if (memories.length < limit) {
+  if (!hasMore(response)) {
     break;
   }
   
@@ -322,7 +312,13 @@ console.log(`Total memories: ${allMemories.length}`);
 ### Error Handling
 
 ```typescript
-import { MemoryClient, NotFoundError, ValidationError } from '@agentmemory/sdk';
+import { 
+  MemoryClient, 
+  NotFoundError, 
+  ValidationError,
+  AuthenticationError,
+  RateLimitError 
+} from '@agentmemory/sdk';
 
 const client = new MemoryClient();
 
@@ -333,22 +329,14 @@ try {
     console.log('Memory not found');
   } else if (error instanceof ValidationError) {
     console.log(`Validation error: ${error.message}`);
+  } else if (error instanceof AuthenticationError) {
+    console.log('Invalid API key');
+  } else if (error instanceof RateLimitError) {
+    console.log(`Rate limited. Retry after: ${error.retryAfter}s`);
   } else {
     console.log(`Error: ${error}`);
   }
 }
-```
-
-### Rate Limiting
-
-The SDK automatically handles rate limiting. You can also configure retry behavior:
-
-```typescript
-const client = new MemoryClient({
-  apiKey: 'your-key',
-  maxRetries: 3,
-  retryDelay: 1000  // milliseconds
-});
 ```
 
 ### Custom Base URL
@@ -362,109 +350,9 @@ const client = new MemoryClient({
 });
 ```
 
-## Examples
-
-### Example 1: Store Task Outcomes
-
-```typescript
-import { MemoryClient } from '@agentmemory/sdk';
-
-const client = new MemoryClient();
-
-async function completeTask(
-  taskName: string,
-  result: string,
-  success: boolean = true
-) {
-  const memory = await client.memories.create({
-    agentId: 'task-runner',
-    memoryType: 'outcome',
-    content: `Task '${taskName}': ${result}`,
-    tags: ['task', 'automation'],
-    metadata: {
-      success,
-      timestamp: new Date().toISOString()
-    }
-  });
-  
-  return memory;
-}
-
-// Use it
-const memory = await completeTask(
-  'deploy-production',
-  'Deployed v2.1.0 to production. All services healthy.',
-  true
-);
-```
-
-### Example 2: Learn from User Feedback
-
-```typescript
-async function storeUserFeedback(
-  userId: string,
-  feedback: string,
-  category: string
-) {
-  const memory = await client.memories.create({
-    agentId: `user-${userId}`,
-    memoryType: 'learning',
-    content: feedback,
-    tags: ['feedback', category],
-    metadata: {
-      userId,
-      category
-    }
-  });
-  
-  return memory;
-}
-
-// Use it
-await storeUserFeedback(
-  '12345',
-  'Users prefer shorter loading screens with progress indicators',
-  'ux'
-);
-```
-
-### Example 3: Context Retrieval for Conversations
-
-```typescript
-async function getRelevantContext(
-  userQuery: string,
-  agentId: string,
-  limit: number = 5
-) {
-  const results = await client.search.semantic({
-    query: userQuery,
-    agentId,
-    limit
-  });
-  
-  const context = results.map(result => ({
-    content: result.memory.content,
-    relevance: result.score,
-    type: result.memory.memoryType
-  }));
-  
-  return context;
-}
-
-// Use it
-const context = await getRelevantContext(
-  'How do I optimize database queries?',
-  'support-bot'
-);
-
-for (const item of context) {
-  console.log(`[${item.type}] ${item.content} (relevance: ${item.relevance.toFixed(2)})`);
-}
-```
-
 ## Type Safety
 
-This SDK is written in TypeScript and provides full type definitions. All methods and models are fully typed:
+This SDK is written in TypeScript and provides full type definitions with `strict` mode enabled. All methods and models are fully typed:
 
 ```typescript
 import {
@@ -473,9 +361,9 @@ import {
   MemoryType,
   Agent,
   Project,
-  SearchResponse,
+  SearchResult,
   MemoryCreateParams,
-  MemoryUpdateParams
+  PaginatedResponse
 } from '@agentmemory/sdk';
 
 // Full autocomplete and type checking
