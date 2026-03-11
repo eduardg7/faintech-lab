@@ -1,0 +1,54 @@
+groups:
+  - name: amc-beta-critical
+    rules:
+      - alert: AMCAPIDown
+        expr: up{job="amc-backend"} == 0
+        for: 5m
+        labels:
+          severity: p0
+          route: amc-incident
+        annotations:
+          summary: AMC backend is down
+          description: AMC backend has been unreachable for more than 5 minutes.
+
+      - alert: AMCStorageExhausted
+        expr: process_resident_memory_bytes > 2000000000
+        for: 15m
+        labels:
+          severity: p1
+          route: amc-ops
+        annotations:
+          summary: AMC backend memory is above 2GB
+          description: Process resident memory exceeded 2GB for 15 minutes.
+
+  - name: amc-beta-performance
+    rules:
+      - alert: AMCHighLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: p1
+          route: amc-ops
+        annotations:
+          summary: AMC API P95 latency above 100ms
+          description: P95 latency has exceeded the beta target for 10 minutes.
+
+      - alert: AMCHighLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: p1
+          route: amc-ops
+        annotations:
+          summary: AMC API P99 latency above 200ms
+          description: P99 latency has exceeded the beta target for 10 minutes.
+
+      - alert: AMCHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / clamp_min(rate(http_requests_total[5m]), 1) > 0.01
+        for: 10m
+        labels:
+          severity: p0
+          route: amc-incident
+        annotations:
+          summary: AMC API error rate above 1%
+          description: The 5xx error rate stayed above 1% for 10 minutes.
