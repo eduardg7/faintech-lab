@@ -1,8 +1,9 @@
 """Memory API router with CRUD endpoints.
 
-All endpoints require JWT authentication and enforce workspace-scoped isolation:
-- workspace_id is always taken from the JWT token, never from the request body
-- Cross-workspace access returns 403 Forbidden (agent isolation - R-LAB-002)
+All endpoints require bearer authentication and enforce workspace-scoped isolation:
+- workspace_id is always taken from the auth context, never from the request body
+- bearer auth accepts JWT access tokens or workspace API keys
+- cross-workspace access returns 403 Forbidden (agent isolation - R-LAB-002)
 """
 
 from datetime import datetime
@@ -21,8 +22,7 @@ from app.core.errors import (
     DatabaseError,
 )
 from app.models.memory import Memory
-from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import AuthContext, get_current_auth_context
 from app.schemas.memory import (
     MemoryCreate,
     MemoryUpdate,
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/memories", tags=["Memories"])
 async def create_memory(
     memory_data: MemoryCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     Create a new memory entry.
@@ -74,7 +74,7 @@ async def create_memory(
 
     # Create memory instance — workspace_id is always from the JWT token (agent isolation)
     db_memory = Memory(
-        workspace_id=current_user.workspace_id,  # Enforced from JWT — never from request
+        workspace_id=auth_context.workspace_id,  # Enforced from auth context — never from request
         agent_id=memory_data.agent_id,
         project_id=memory_data.project_id,
         type=memory_data.memory_type.value,
@@ -121,7 +121,7 @@ async def list_memories(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     List memories with optional filters and pagination.
@@ -141,7 +141,7 @@ async def list_memories(
     query = select(Memory).where(
         and_(
             Memory.deleted_at.is_(None),
-            Memory.workspace_id == current_user.workspace_id,
+            Memory.workspace_id == auth_context.workspace_id,
         )
     )
 
@@ -167,7 +167,7 @@ async def list_memories(
     count_query = select(Memory.id).where(
         and_(
             Memory.deleted_at.is_(None),
-            Memory.workspace_id == current_user.workspace_id,
+            Memory.workspace_id == auth_context.workspace_id,
         )
     )
     if agent_id:
@@ -224,7 +224,7 @@ async def list_memories(
 async def get_memory(
     memory_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     Get a specific memory by ID.
@@ -244,7 +244,7 @@ async def get_memory(
         raise NotFoundError(resource="Memory", identifier=memory_id)
 
     # Workspace ownership check — prevent cross-workspace reads (R-LAB-002)
-    if memory.workspace_id != current_user.workspace_id:
+    if memory.workspace_id != auth_context.workspace_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: agent isolation",
@@ -271,7 +271,7 @@ async def update_memory(
     memory_id: str,
     memory_data: MemoryUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     Update an existing memory.
@@ -294,7 +294,7 @@ async def update_memory(
         raise NotFoundError(resource="Memory", identifier=memory_id)
 
     # Workspace ownership check — prevent cross-workspace writes (R-LAB-002)
-    if memory.workspace_id != current_user.workspace_id:
+    if memory.workspace_id != auth_context.workspace_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: agent isolation",
@@ -347,7 +347,7 @@ async def update_memory(
 async def delete_memory(
     memory_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     Delete a memory (soft delete).
@@ -367,7 +367,7 @@ async def delete_memory(
         raise NotFoundError(resource="Memory", identifier=memory_id)
 
     # Workspace ownership check — prevent cross-workspace deletes (R-LAB-002)
-    if memory.workspace_id != current_user.workspace_id:
+    if memory.workspace_id != auth_context.workspace_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: agent isolation",

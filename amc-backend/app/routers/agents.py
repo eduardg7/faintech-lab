@@ -3,8 +3,8 @@
 GET /v1/agents   — list agents with memory counts and last activity, scoped by project
 GET /v1/projects — list projects accessible to the caller with memory counts
 
-All endpoints require JWT authentication and are scoped to the caller's workspace
-(agent isolation R-LAB-002).
+All endpoints require bearer authentication and are scoped to the caller's workspace
+(agent isolation R-LAB-002). Bearer auth accepts JWT access tokens or workspace API keys.
 """
 
 from datetime import datetime
@@ -17,8 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.memory import Memory
-from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import AuthContext, get_current_auth_context
 
 router = APIRouter(tags=["Agents & Projects"])
 
@@ -74,7 +73,7 @@ async def list_agents(
     limit: int = Query(100, ge=1, le=500, description="Max number of agents to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     List agents with aggregated memory statistics.
@@ -88,7 +87,7 @@ async def list_agents(
     # Base filter — exclude soft-deleted memories and enforce workspace isolation
     filters = [
         Memory.deleted_at.is_(None),
-        Memory.workspace_id == current_user.workspace_id,
+        Memory.workspace_id == auth_context.workspace_id,
     ]
     if project_id:
         filters.append(Memory.project_id == project_id)
@@ -145,7 +144,7 @@ async def list_projects(
     ),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    auth_context: AuthContext = Depends(get_current_auth_context),
 ):
     """
     List projects with aggregated memory and agent statistics.
@@ -158,7 +157,7 @@ async def list_projects(
     """
     filters = [
         Memory.deleted_at.is_(None),
-        Memory.workspace_id == current_user.workspace_id,
+        Memory.workspace_id == auth_context.workspace_id,
         Memory.project_id.isnot(None),
         Memory.project_id != "",
     ]
