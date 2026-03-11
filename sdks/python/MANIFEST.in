@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include agentmemory *.py
+recursive-include tests *.py
