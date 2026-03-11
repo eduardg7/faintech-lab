@@ -26,6 +26,21 @@ docker build -t amc-backend .
 docker run -p 8000:8000 amc-backend
 ```
 
+### Production deploy contract
+
+A bounded production deployment slice is included for operator-driven releases:
+
+```bash
+cp .env.production.example .env.production
+chmod +x scripts/deploy-production.sh
+./scripts/deploy-production.sh
+```
+
+Supporting files:
+- `docker-compose.production.yml`
+- `scripts/deploy-production.sh`
+- `../docs/ops/AMC-PRODUCTION-DEPLOYMENT-RUNBOOK.md`
+
 ## Production Setup (Neon PostgreSQL + pgvector)
 
 The AMC backend uses SQLite + JSON embeddings for development. Production requires
