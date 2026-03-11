@@ -2,6 +2,9 @@
 
 GET /v1/agents   — list agents with memory counts and last activity, scoped by project
 GET /v1/projects — list projects accessible to the caller with memory counts
+
+All endpoints require JWT authentication and are scoped to the caller's workspace
+(agent isolation R-LAB-002).
 """
 
 from datetime import datetime
@@ -14,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.memory import Memory
+from app.models.user import User
+from app.routers.auth import get_current_user
 
 router = APIRouter(tags=["Agents & Projects"])
 
@@ -59,7 +64,7 @@ class ProjectListResponse(BaseModel):
     response_model=AgentListResponse,
     summary="List agents with activity aggregation",
     description=(
-        "Returns a list of distinct agents derived from memory records. "
+        "Returns a list of distinct agents derived from memory records in the caller's workspace. "
         "Optionally filter by project_id for project isolation. "
         "Each entry includes total memory count and timestamp of last activity."
     ),
@@ -69,15 +74,22 @@ async def list_agents(
     limit: int = Query(100, ge=1, le=500, description="Max number of agents to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List agents with aggregated memory statistics.
 
+    Requires JWT authentication. Results are scoped to the caller's workspace —
+    agents from other workspaces are never visible (agent isolation R-LAB-002).
+
     Project isolation: when *project_id* is supplied only agents that have at
     least one memory tagged to that project are returned (RLS emulation).
     """
-    # Base filter — exclude soft-deleted memories
-    filters = [Memory.deleted_at.is_(None)]
+    # Base filter — exclude soft-deleted memories and enforce workspace isolation
+    filters = [
+        Memory.deleted_at.is_(None),
+        Memory.workspace_id == current_user.workspace_id,
+    ]
     if project_id:
         filters.append(Memory.project_id == project_id)
 
@@ -122,7 +134,7 @@ async def list_agents(
     response_model=ProjectListResponse,
     summary="List accessible projects",
     description=(
-        "Returns all projects that have at least one memory record. "
+        "Returns all projects in the caller's workspace that have at least one memory record. "
         "Includes agent count and total memory count per project. "
         "Memories without a project_id are excluded."
     ),
@@ -133,15 +145,20 @@ async def list_projects(
     ),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List projects with aggregated memory and agent statistics.
+
+    Requires JWT authentication. Results are scoped to the caller's workspace —
+    projects from other workspaces are never visible (agent isolation R-LAB-002).
 
     Only projects with at least one active (non-deleted) memory appear.
     Memories that have no project_id set are not included.
     """
     filters = [
         Memory.deleted_at.is_(None),
+        Memory.workspace_id == current_user.workspace_id,
         Memory.project_id.isnot(None),
         Memory.project_id != "",
     ]

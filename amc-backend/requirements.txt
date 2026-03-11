@@ -8,8 +8,9 @@ python-dotenv==1.0.1
 alembic==1.13.3
 openai==1.35.3
 # pgvector for PostgreSQL vector similarity (production only, requires PostgreSQL extension)
+# Install manually for production: pip install pgvector asyncpg
+# Not auto-installed to keep dev environment lightweight (SQLite dev uses JSON fallback)
 # pgvector==0.2.5
-# asyncpg for PostgreSQL (optional, for production)
 # asyncpg==0.29.0
 numpy>=1.24.0,<2.0.0
 # JWT Authentication
