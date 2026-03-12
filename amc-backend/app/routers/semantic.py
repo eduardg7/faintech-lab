@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, text
 from pydantic import BaseModel, Field
 import time
+import numpy as np
 
 from app.core.database import get_db
+from app.core.cache import get_cache_service
 from app.core.jobs import JobQueue, get_job_queue
 from app.models.memory import Memory
 from app.services.embedding import get_embedding_service
@@ -21,6 +23,8 @@ class SemanticSearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000, description="Search query text")
     limit: int = Field(10, ge=1, le=50, description="Max results to return")
     min_similarity: float = Field(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)")
+    page: int = Field(1, ge=1, description="Page number")
+    page_size: int = Field(10, ge=1, le=50, description="Items per page")
 
 
 class SemanticSearchResult(BaseModel):
@@ -37,10 +41,15 @@ class SemanticSearchResult(BaseModel):
 
 
 class SemanticSearchResponse(BaseModel):
-    """Semantic search response."""
+    """Semantic search response with pagination."""
     results: List[SemanticSearchResult]
+    total: int = Field(..., description="Total matching results")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Items per page")
+    has_next: bool = Field(..., description="Whether more results exist")
     query_time_ms: float = Field(..., description="Query execution time in milliseconds")
     query_embedding_time_ms: float = Field(..., description="Time to generate query embedding")
+    cache_hit: bool = Field(False, description="Whether embedding was served from cache")
 
 
 class EmbedJobRequest(BaseModel):
@@ -73,63 +82,92 @@ async def semantic_search(
     Returns results ranked by cosine similarity to query embedding.
     """
     start_time = time.perf_counter()
+    cache = get_cache_service()
     
-    # Generate embedding for query
+    # Try to get cached embedding first
     embed_start = time.perf_counter()
-    embedding_service = get_embedding_service()
-    query_embedding_result = await embedding_service.embed_text(request.query)
-    query_embedding = query_embedding_result['embedding']
+    cache_hit = False
+    query_embedding = await cache.get_embedding(request.query)
+    
+    if query_embedding is None:
+        # Generate embedding for query
+        embedding_service = get_embedding_service()
+        query_embedding_result = await embedding_service.embed_text(request.query)
+        query_embedding = query_embedding_result['embedding']
+        # Cache the embedding for future use
+        await cache.set_embedding(request.query, query_embedding)
+    else:
+        cache_hit = True
+    
     embedding_time = (time.perf_counter() - embed_start) * 1000
     
-    # Build query for vector similarity search
-    # PostgreSQL with pgvector uses the <=> operator for cosine similarity
-    query = text("""
-        SELECT 
-            id, workspace_id, agent_id, project_id, type, content, 
-            tags, importance, created_at, updated_at,
-            1 - (embedding <=> :query_vector) as similarity
-        FROM memories
-        WHERE deleted_at IS NULL
-        AND embedding IS NOT NULL
-        AND (embedding <=> :query_vector) >= :min_similarity
-        ORDER BY similarity DESC
-        LIMIT :limit
-    """)
-    
-    # Execute query
-    result = await db.execute(
-        query,
-        {
-            "query_vector": query_embedding,
-            "min_similarity": request.min_similarity,
-            "limit": request.limit
-        }
+    # TODO: Migrate to pgvector for production (TD-015)
+    # Current implementation uses Python cosine similarity for SQLite compatibility
+    # Load all memories with embeddings (temporary workaround)
+    query = select(Memory).where(
+        and_(
+            Memory.deleted_at.is_(None),
+            Memory.embedding.isnot(None)
+        )
     )
+    result = await db.execute(query)
+    memories = result.scalars().all()
+
+    # Compute cosine similarity in Python
+    query_vec = np.array(query_embedding)
+    query_norm = np.linalg.norm(query_vec)
+
+    scored_memories = []
+    for memory in memories:
+        if memory.embedding and len(memory.embedding) > 0:
+            mem_vec = np.array(memory.embedding)
+            mem_norm = np.linalg.norm(mem_vec)
+
+            # Cosine similarity: (A · B) / (||A|| ||B||)
+            if query_norm > 0 and mem_norm > 0:
+                similarity = np.dot(query_vec, mem_vec) / (query_norm * mem_norm)
+
+                if similarity >= request.min_similarity:
+                    scored_memories.append((memory, similarity))
+
+    # Sort by similarity (descending)
+    scored_memories.sort(key=lambda x: x[1], reverse=True)
     
-    rows = result.all()
+    # Calculate total before pagination
+    total = len(scored_memories)
+    
+    # Apply pagination
+    offset = (request.page - 1) * request.page_size
+    paginated_memories = scored_memories[offset:offset + request.page_size]
+    has_next = (offset + request.page_size) < total
+
+    # Convert to response format
+    search_results = []
+    for memory, similarity in paginated_memories:
+        search_results.append(SemanticSearchResult(
+            id=memory.id,
+            workspace_id=memory.workspace_id,
+            agent_id=memory.agent_id,
+            project_id=memory.project_id,
+            memory_type=memory.type,
+            content=memory.content,
+            tags=memory.get_tags(),
+            similarity_score=float(similarity),
+            created_at=memory.created_at
+        ))
     
     # Calculate total time
     query_time_ms = (time.perf_counter() - start_time) * 1000
-    
-    # Convert to response format
-    search_results = []
-    for row in rows:
-        search_results.append(SemanticSearchResult(
-            id=row[0],
-            workspace_id=row[1],
-            agent_id=row[2],
-            project_id=row[3],
-            memory_type=row[4],
-            content=row[5],
-            tags=row[6] if row[6] else [],
-            similarity_score=float(row[11]),
-            created_at=row[9]
-        ))
-    
+
     return SemanticSearchResponse(
         results=search_results,
+        total=total,
+        page=request.page,
+        page_size=request.page_size,
+        has_next=has_next,
         query_time_ms=round(query_time_ms, 2),
-        query_embedding_time_ms=round(embedding_time, 2)
+        query_embedding_time_ms=round(embedding_time, 2),
+        cache_hit=cache_hit
     )
 
 

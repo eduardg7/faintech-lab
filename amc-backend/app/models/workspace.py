@@ -32,6 +32,7 @@ class Workspace(Base):
     api_keys = relationship("ApiKey", back_populates="workspace", cascade="all, delete-orphan")
     memories = relationship("Memory", back_populates="workspace", cascade="all, delete-orphan")
     patterns = relationship("Pattern", back_populates="workspace", cascade="all, delete-orphan")
+    users = relationship("User", back_populates="workspace", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<Workspace(id={self.id}, slug={self.slug}, tier={self.tier})>"

@@ -3,17 +3,32 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api, Memory } from '@/lib/api';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import ErrorState from './ui/ErrorState';
 import LoadingState from './ui/LoadingState';
 import EmptyState from './ui/EmptyState';
 import DashboardStats from './ui/DashboardStats';
+import OnboardingShell from './dashboard/OnboardingShell';
 
 export default function MemoryList() {
   const { apiKey, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: Cmd/Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Fetch memories
   const { data, isLoading, error, refetch } = useQuery({
@@ -38,6 +53,18 @@ export default function MemoryList() {
     enabled: !!apiKey && searchQuery.length > 0,
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: () => api.getCurrentUser(apiKey!),
+    enabled: !!apiKey,
+  });
+
+  const { data: apiKeysData } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: () => api.listApiKeys(apiKey!),
+    enabled: !!apiKey,
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery) {
@@ -59,7 +86,7 @@ export default function MemoryList() {
     const memoryCount = data.total || data.memories.length;
     const uniqueAgents = new Set(data.memories.map((m) => m.agent_id));
     const agentCount = uniqueAgents.size;
-    
+
     // Find most recent activity
     const sortedByDate = [...data.memories].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -69,9 +96,23 @@ export default function MemoryList() {
     return { memoryCount, agentCount, lastActivity };
   }, [data]);
 
+  const showOnboardingShell =
+    !hasActiveFilters &&
+    !isLoading &&
+    !error &&
+    !!currentUser &&
+    memories !== undefined &&
+    memories.length === 0;
+
   const clearFilters = () => {
     setSelectedType('');
     setSelectedAgent('');
+    setSearchQuery('');
+  };
+
+  const prefillFirstMemory = () => {
+    setSelectedAgent('founder');
+    setSelectedType('learning');
     setSearchQuery('');
   };
 
@@ -107,7 +148,7 @@ export default function MemoryList() {
             Logout
           </button>
         </div>
-        <ErrorState 
+        <ErrorState
           message="We couldn't load your memories. Please check your connection and try again."
           onRetry={() => refetch()}
         />
@@ -116,7 +157,12 @@ export default function MemoryList() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      id="main-content"
+      role="main"
+      aria-label="Memory Dashboard"
+    >
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Memory Dashboard</h1>
@@ -145,15 +191,21 @@ export default function MemoryList() {
           <label htmlFor="search-input" className="sr-only">
             Search memories
           </label>
-          <input
-            id="search-input"
-            type="text"
-            placeholder="Search memories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:border-transparent"
-            aria-label="Search memories"
-          />
+          <div className="relative flex-1">
+            <input
+              id="search-input"
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search memories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:border-transparent"
+              aria-label="Search memories"
+            />
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-400 bg-gray-100 rounded border border-gray-200 pointer-events-none">
+              ⌘K
+            </kbd>
+          </div>
           <button
             type="submit"
             className="px-6 py-2 bg-amc-primary text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary transition-colors"
@@ -205,12 +257,18 @@ export default function MemoryList() {
       </div>
 
       {/* Memory List */}
-      {memories && memories.length > 0 ? (
+      {showOnboardingShell ? (
+        <OnboardingShell
+          user={currentUser}
+          apiKeys={apiKeysData?.api_keys ?? []}
+          onPrefillMemory={prefillFirstMemory}
+        />
+      ) : memories && memories.length > 0 ? (
         <div className="space-y-4" role="list" aria-label="Memory list">
           {memories.map((memory, index) => {
             const searchResult = searchQuery ? searchData?.results[index] : null;
             const score = searchResult?.score;
-            
+
             return (
               <article
                 key={memory.id}
@@ -231,7 +289,7 @@ export default function MemoryList() {
                       {memory.agent_id}
                     </span>
                     {score !== undefined && score !== null && (
-                      <span 
+                      <span
                         className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 text-yellow-800"
                         aria-label={`Relevance score: ${(score * 100).toFixed(0)}%`}
                         title="Search relevance score"
@@ -240,7 +298,7 @@ export default function MemoryList() {
                       </span>
                     )}
                   </div>
-                  <time 
+                  <time
                     className="text-xs text-gray-400"
                     dateTime={memory.created_at}
                     aria-label={`Created at ${new Date(memory.created_at).toLocaleString()}`}
@@ -267,7 +325,7 @@ export default function MemoryList() {
           })}
         </div>
       ) : (
-        <EmptyState 
+        <EmptyState
           hasFilters={!!hasActiveFilters}
           onClearFilters={clearFilters}
         />

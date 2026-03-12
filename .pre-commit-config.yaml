@@ -1,0 +1,31 @@
+# pre-commit hooks pentru faintech-lab
+# Rulează automat la fiecare git commit + poate fi triggerat manual
+# Owner: faintech-devops | Created: 2026-03-11
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: Gitleaks — secrets detection
+        description: Detectează secrets, API keys, credentials în cod
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest — fast test suite (amc-backend)
+        entry: bash -c 'cd /Users/eduardgridan/faintech-lab/amc-backend && venv/bin/pytest tests/ -x -q --timeout=30 2>&1 | tail -20'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

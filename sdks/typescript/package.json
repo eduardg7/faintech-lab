@@ -1,0 +1,60 @@
+{
+  "name": "@agentmemory/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for Agent Memory Cloud - Persistent memory infrastructure for AI agent fleets",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "agent",
+    "memory",
+    "ai",
+    "llm",
+    "persistent-memory",
+    "faintech"
+  ],
+  "author": "Faintech Solutions <support@faintech.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faintech/agentmemory-sdk-typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/faintech/agentmemory-sdk-typescript/issues"
+  },
+  "homepage": "https://docs.faintech.dev",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.7.0"
+  }
+}

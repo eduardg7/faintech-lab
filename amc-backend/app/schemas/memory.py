@@ -17,18 +17,19 @@ class MemoryCreate(BaseModel):
     """Schema for creating a new memory."""
     agent_id: str = Field(..., description="Agent ID that owns this memory")
     project_id: Optional[str] = Field(None, description="Associated project ID")
+    task_id: Optional[str] = Field(None, description="Associated task ID (TD-013)")
     memory_type: MemoryType = Field(..., description="Type of memory entry")
     content: str = Field(..., description="Memory content", max_length=10240)  # 10KB limit
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     metadata: Optional[dict] = Field(default=None, description="Additional metadata")
-    
+
     @validator('content')
     def validate_content_size(cls, v):
         """Validate content is not too large."""
         if len(v.encode('utf-8')) > 10240:  # 10KB in bytes
             raise ValueError('Content exceeds 10KB limit')
         return v
-    
+
     @validator('tags')
     def validate_tags_count(cls, v):
         """Validate number of tags."""
@@ -42,14 +43,14 @@ class MemoryUpdate(BaseModel):
     content: Optional[str] = Field(None, max_length=10240)
     tags: Optional[List[str]] = None
     metadata: Optional[dict] = None
-    
+
     @validator('content')
     def validate_content_size(cls, v):
         """Validate content is not too large."""
         if v and len(v.encode('utf-8')) > 10240:
             raise ValueError('Content exceeds 10KB limit')
         return v
-    
+
     @validator('tags')
     def validate_tags_count(cls, v):
         """Validate number of tags."""
@@ -72,7 +73,7 @@ class MemoryResponse(BaseModel):
     importance: float = 0.5
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -90,6 +91,7 @@ class MemoryFilter(BaseModel):
     """Schema for filtering memories."""
     agent_id: Optional[str] = None
     project_id: Optional[str] = None
+    task_id: Optional[str] = None  # TD-013: Filter by task ID
     memory_type: Optional[MemoryType] = None
     tags: Optional[List[str]] = None
     search: Optional[str] = None

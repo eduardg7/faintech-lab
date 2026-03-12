@@ -4,6 +4,7 @@ from app.models.workspace import Workspace
 from app.models.api_key import ApiKey
 from app.models.memory import Memory, MEMORY_TYPES
 from app.models.pattern import Pattern, PatternExample
+from app.models.user import User, RefreshToken
 
 __all__ = [
     "Base",
@@ -18,4 +19,6 @@ __all__ = [
     "MEMORY_TYPES",
     "Pattern",
     "PatternExample",
+    "User",
+    "RefreshToken",
 ]
