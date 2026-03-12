@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ErrorState from './ui/ErrorState';
 import LoadingState from './ui/LoadingState';
 import EmptyState from './ui/EmptyState';
@@ -14,6 +14,20 @@ export default function MemoryList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: Cmd/Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Fetch memories
   const { data, isLoading, error, refetch } = useQuery({
@@ -146,15 +160,21 @@ export default function MemoryList() {
           <label htmlFor="search-input" className="sr-only">
             Search memories
           </label>
-          <input
-            id="search-input"
-            type="text"
-            placeholder="Search memories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:border-transparent"
-            aria-label="Search memories"
-          />
+          <div className="relative flex-1">
+            <input
+              id="search-input"
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search memories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:border-transparent"
+              aria-label="Search memories"
+            />
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-400 bg-gray-100 rounded border border-gray-200 pointer-events-none">
+              ⌘K
+            </kbd>
+          </div>
           <button
             type="submit"
             className="px-6 py-2 bg-amc-primary text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary transition-colors"
