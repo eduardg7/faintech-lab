@@ -19,10 +19,10 @@ Owner: faintech-cpo | Created: 2026-03-11 | Status: Ready for Execution
 ```
 Hi [Name],
 
-Saw your post about [specific problem they mentioned]. We're building 
+Saw your post about [specific problem they mentioned]. We're building
 something that might help.
 
-Agent Memory Cloud gives your agents persistent, searchable memory that 
+Agent Memory Cloud gives your agents persistent, searchable memory that
 survives session restarts and enables cross-agent learning.
 
 - One API call to read/write memories
@@ -44,7 +44,7 @@ Faintech
 ```
 Hi [Name],
 
-Noticed you're building a custom memory layer for your agents. We just 
+Noticed you're building a custom memory layer for your agents. We just
 shipped Agent Memory Cloud — might save you some engineering time.
 
 What we built:
@@ -68,7 +68,7 @@ Faintech
 ```
 Hi [Name],
 
-Saw you were looking for agent memory solutions. We just launched 
+Saw you were looking for agent memory solutions. We just launched
 Agent Memory Cloud — might be what you need.
 
 Quick pitch:
@@ -77,7 +77,7 @@ Quick pitch:
 - Cross-agent learning
 - Simple API: memory.write() / memory.search()
 
-We're in beta — happy to set you up with free access if you'll share 
+We're in beta — happy to set you up with free access if you'll share
 feedback on what's missing.
 
 Want to try it?
@@ -93,7 +93,7 @@ Faintech
 ### Reply to "How do you handle agent memory?"
 
 ```
-We're building Agent Memory Cloud for exactly this problem — persistent, 
+We're building Agent Memory Cloud for exactly this problem — persistent,
 searchable memory for AI agents.
 
 Key features:
@@ -108,7 +108,7 @@ Early beta if anyone wants to try: [link]
 ### Reply to "Mem0/LangChain memory problems"
 
 ```
-We ran into similar issues with existing memory solutions, which is why 
+We ran into similar issues with existing memory solutions, which is why
 we built Agent Memory Cloud.
 
 Different approach:

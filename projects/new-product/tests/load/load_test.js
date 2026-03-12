@@ -67,7 +67,7 @@ export default function () {
 
 function testHealthEndpoint() {
   const res = http.get(`${BASE_URL}/health`);
-  
+
   check(res, {
     'health check status is 200': (r) => r.status === 200,
   });
@@ -96,7 +96,7 @@ function testCreateMemory(agentId, projectId, taskId) {
   };
 
   const res = http.post(`${BASE_URL}/api/v1/memories/`, payload, params);
-  
+
   const success = check(res, {
     'create memory status is 201': (r) => r.status === 201,
     'create memory has id': (r) => {
@@ -136,7 +136,7 @@ function testSearchMemories(agentId) {
   };
 
   const res = http.post(`${BASE_URL}/api/v1/memories/search`, payload, params);
-  
+
   const success = check(res, {
     'search memories status is 200': (r) => r.status === 200,
     'search memories has results': (r) => {
@@ -154,7 +154,7 @@ function testSearchMemories(agentId) {
 
 function testGetAgentMemories(agentId) {
   const res = http.get(`${BASE_URL}/api/v1/memories/agent/${agentId}?limit=20`);
-  
+
   const success = check(res, {
     'get agent memories status is 200': (r) => r.status === 200,
     'get agent memories has results': (r) => {
@@ -172,7 +172,7 @@ function testGetAgentMemories(agentId) {
 
 function testGetTaskMemories(projectId, taskId) {
   const res = http.get(`${BASE_URL}/api/v1/memories/task/${projectId}/${taskId}?limit=50`);
-  
+
   const success = check(res, {
     'get task memories status is 200': (r) => r.status === 200,
     'get task memories has results': (r) => {
@@ -204,17 +204,17 @@ export function handleSummary(data) {
 function textSummary(data, options = {}) {
   const indent = options.indent || '  ';
   const colors = options.enableColors || false;
-  
+
   let summary = '\n' + '='.repeat(60) + '\n';
   summary += 'LOAD TEST SUMMARY\n';
   summary += '='.repeat(60) + '\n\n';
-  
+
   // Overall metrics
   summary += `${indent}Total Requests: ${data.metrics.requests?.values?.count || 0}\n`;
   summary += `${indent}Request Rate: ${data.metrics.http_reqs?.values?.rate?.toFixed(2) || 0} req/s\n`;
   summary += `${indent}Error Rate: ${(data.metrics.errors?.values?.rate * 100 || 0).toFixed(2)}%\n`;
   summary += '\n';
-  
+
   // Latency metrics
   summary += `${indent}Latency (ms):\n`;
   summary += `${indent}${indent}Avg: ${data.metrics.http_req_duration?.values?.avg?.toFixed(2) || 0}\n`;
@@ -224,7 +224,7 @@ function textSummary(data, options = {}) {
   summary += `${indent}${indent}P95: ${data.metrics.http_req_duration?.values?.['p(95)']?.toFixed(2) || 0}\n`;
   summary += `${indent}${indent}P99: ${data.metrics.http_req_duration?.values?.['p(99)']?.toFixed(2) || 0}\n`;
   summary += '\n';
-  
+
   // Threshold checks
   summary += `${indent}Threshold Checks:\n`;
   if (data.root_group?.checks) {
@@ -233,8 +233,8 @@ function textSummary(data, options = {}) {
     const total = checks.length;
     summary += `${indent}${indent}Passed: ${passed}/${total}\n`;
   }
-  
+
   summary += '\n' + '='.repeat(60) + '\n';
-  
+
   return summary;
 }

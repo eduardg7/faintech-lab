@@ -41,7 +41,7 @@ class UserResponse(BaseModel):
     workspace_id: str
     created_at: datetime
     last_login_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 

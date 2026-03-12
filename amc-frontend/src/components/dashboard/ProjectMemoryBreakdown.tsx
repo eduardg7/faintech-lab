@@ -10,7 +10,7 @@ interface ProjectMemoryBreakdownProps {
 export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectMemoryBreakdownProps) {
   if (isLoading) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="status"
         aria-live="polite"
@@ -31,7 +31,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
 
   if (!projects || projects.length === 0) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="alert"
         aria-live="polite"
@@ -69,14 +69,14 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
   };
 
   return (
-    <div 
+    <div
       className="bg-white border border-gray-200 rounded-lg p-6"
       role="region"
       aria-labelledby="project-breakdown-title"
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 
+          <h2
             id="project-breakdown-title"
             className="text-lg font-semibold text-gray-900"
           >
@@ -89,18 +89,18 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
       </div>
 
       {/* Type Legend */}
-      <div 
+      <div
         className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-gray-100"
         role="list"
         aria-label="Memory type legend"
       >
         {Object.entries(typeLabels).map(([type, label]) => (
-          <div 
+          <div
             key={type}
             className="flex items-center gap-2"
             role="listitem"
           >
-            <div 
+            <div
               className={`w-3 h-3 rounded ${typeColors[type]}`}
               aria-hidden="true"
             />
@@ -110,7 +110,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
       </div>
 
       {/* Project Cards */}
-      <div 
+      <div
         className="space-y-4"
         role="list"
         aria-label="Project memory breakdown"
@@ -129,7 +129,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
               {/* Project Header */}
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 
+                  <h3
                     id={`project-${project.project_id}-title`}
                     className="font-medium text-gray-900"
                   >
@@ -143,7 +143,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
                   <p className="text-lg font-semibold text-gray-900">
                     {total.toLocaleString()}
                   </p>
-                  <p 
+                  <p
                     className={`text-xs font-medium ${getGrowthColor(project.growth_rate)}`}
                     aria-label={`Growth rate: ${project.growth_rate}% per week`}
                   >
@@ -153,7 +153,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
               </div>
 
               {/* Type Distribution */}
-              <div 
+              <div
                 className="mb-3"
                 role="img"
                 aria-label={`Memory distribution for ${project.project_name}: ${project.by_type.outcome} outcomes, ${project.by_type.learning} learnings, ${project.by_type.preference} preferences, ${project.by_type.decision} decisions`}
@@ -163,7 +163,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
                     <div
                       key={type}
                       className={`${typeColors[type]} transition-all duration-300`}
-                      style={{ 
+                      style={{
                         width: `${(count / total) * 100}%`,
                       }}
                       title={`${typeLabels[type]}: ${count}`}
@@ -172,7 +172,7 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
                 </div>
                 <div className="flex justify-between mt-1">
                   {Object.entries(project.by_type).map(([type, count]) => (
-                    <span 
+                    <span
                       key={type}
                       className="text-xs text-gray-500"
                     >
@@ -185,13 +185,13 @@ export default function ProjectMemoryBreakdown({ projects, isLoading }: ProjectM
               {/* Top Agents */}
               <div>
                 <p className="text-xs text-gray-500 mb-2">Top Contributors</p>
-                <div 
+                <div
                   className="flex flex-wrap gap-2"
                   role="list"
                   aria-label="Top contributing agents"
                 >
                   {project.top_agents.slice(0, 3).map((agent) => (
-                    <div 
+                    <div
                       key={agent.agent_id}
                       className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded text-xs"
                       role="listitem"

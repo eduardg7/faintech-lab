@@ -2,11 +2,11 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  statsApi, 
-  mockMemoryStats, 
-  mockAgentActivity, 
-  mockProjectBreakdown 
+import {
+  statsApi,
+  mockMemoryStats,
+  mockAgentActivity,
+  mockProjectBreakdown
 } from '@/lib/stats-api';
 import MemoryStatsChart from '@/components/dashboard/MemoryStatsChart';
 import AgentActivityTimeline from '@/components/dashboard/AgentActivityTimeline';
@@ -25,10 +25,10 @@ export default function DashboardPage() {
   }, [isAuthenticated]);
 
   // Fetch memory stats with 30s polling
-  const { 
-    data: memoryStats, 
-    isLoading: statsLoading, 
-    error: statsError 
+  const {
+    data: memoryStats,
+    isLoading: statsLoading,
+    error: statsError
   } = useQuery({
     queryKey: ['memory-stats'],
     queryFn: async () => {
@@ -47,9 +47,9 @@ export default function DashboardPage() {
   });
 
   // Fetch agent activity with 30s polling
-  const { 
-    data: agentActivity, 
-    isLoading: activityLoading 
+  const {
+    data: agentActivity,
+    isLoading: activityLoading
   } = useQuery({
     queryKey: ['agent-activity'],
     queryFn: async () => {
@@ -67,9 +67,9 @@ export default function DashboardPage() {
   });
 
   // Fetch project breakdown with 30s polling
-  const { 
-    data: projectBreakdown, 
-    isLoading: projectsLoading 
+  const {
+    data: projectBreakdown,
+    isLoading: projectsLoading
   } = useQuery({
     queryKey: ['project-breakdown'],
     queryFn: async () => {
@@ -91,21 +91,21 @@ export default function DashboardPage() {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-gray-50"
       role="main"
       id="main-content"
       aria-label="Agent Memory Dashboard"
     >
       {/* Header */}
-      <header 
+      <header
         className="bg-white border-b border-gray-200"
         role="banner"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 
+              <h1
                 className="text-2xl font-bold text-gray-900"
                 id="dashboard-title"
               >
@@ -136,17 +136,17 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main 
+      <main
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
         aria-labelledby="dashboard-title"
       >
         {/* Live Update Indicator */}
-        <div 
+        <div
           className="flex items-center gap-2 mb-6"
           role="status"
           aria-live="polite"
         >
-          <div 
+          <div
             className="w-2 h-2 bg-green-500 rounded-full animate-pulse"
             aria-hidden="true"
           />
@@ -161,19 +161,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div 
+        <div
           className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
           role="list"
           aria-label="Dashboard statistics"
         >
           <div role="listitem">
-            <MemoryStatsChart 
-              stats={memoryStats || null} 
-              isLoading={statsLoading} 
+            <MemoryStatsChart
+              stats={memoryStats || null}
+              isLoading={statsLoading}
             />
           </div>
           <div role="listitem">
-            <AgentActivityTimeline 
+            <AgentActivityTimeline
               agents={agentActivity?.agents || []}
               isLoading={activityLoading}
             />
@@ -182,7 +182,7 @@ export default function DashboardPage() {
 
         {/* Project Breakdown */}
         <div role="listitem">
-          <ProjectMemoryBreakdown 
+          <ProjectMemoryBreakdown
             projects={projectBreakdown?.projects || []}
             isLoading={projectsLoading}
           />
@@ -190,7 +190,7 @@ export default function DashboardPage() {
       </main>
 
       {/* Footer */}
-      <footer 
+      <footer
         className="bg-white border-t border-gray-200 mt-8"
         role="contentinfo"
       >

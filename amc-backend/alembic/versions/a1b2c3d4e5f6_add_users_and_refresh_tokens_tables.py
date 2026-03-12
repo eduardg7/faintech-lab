@@ -34,7 +34,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_users_email', 'users', ['email'])
     op.create_index('ix_users_workspace_id', 'users', ['workspace_id'])
-    
+
     # Create refresh_tokens table
     op.create_table(
         'refresh_tokens',

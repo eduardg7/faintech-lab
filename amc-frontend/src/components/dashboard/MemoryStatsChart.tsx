@@ -10,7 +10,7 @@ interface MemoryStatsChartProps {
 export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartProps) {
   if (isLoading) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="status"
         aria-live="polite"
@@ -28,7 +28,7 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
 
   if (!stats) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="alert"
         aria-live="polite"
@@ -54,14 +54,14 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
   };
 
   return (
-    <div 
+    <div
       className="bg-white border border-gray-200 rounded-lg p-6"
       role="region"
       aria-labelledby="memory-stats-title"
     >
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 
+          <h2
             id="memory-stats-title"
             className="text-lg font-semibold text-gray-900"
           >
@@ -80,7 +80,7 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
       </div>
 
       {/* Memory Type Distribution */}
-      <div 
+      <div
         className="mb-6"
         role="img"
         aria-label={`Memory distribution: ${stats.by_type.outcome} outcomes, ${stats.by_type.learning} learnings, ${stats.by_type.preference} preferences, ${stats.by_type.decision} decisions`}
@@ -99,7 +99,7 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
                   {count.toLocaleString()}
                 </span>
               </div>
-              <div 
+              <div
                 className="w-full bg-gray-200 rounded-full h-2"
                 role="progressbar"
                 aria-valuenow={count}
@@ -122,13 +122,13 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
         <h3 className="text-sm font-medium text-gray-700 mb-3">
           Top Projects
         </h3>
-        <div 
+        <div
           className="space-y-2"
           role="list"
           aria-label="Memory distribution by project"
         >
           {stats.by_project.slice(0, 5).map((project) => (
-            <div 
+            <div
               key={project.project_id}
               className="flex items-center justify-between"
               role="listitem"
@@ -153,7 +153,7 @@ export default function MemoryStatsChart({ stats, isLoading }: MemoryStatsChartP
       <div className="mt-6 pt-4 border-t border-gray-100">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">Avg Importance</span>
-          <div 
+          <div
             className="flex items-center gap-2"
             role="meter"
             aria-valuenow={stats.avg_importance * 100}
