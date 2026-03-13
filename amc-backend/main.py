@@ -1,4 +1,22 @@
-"""FastAPI application factory and main entry point."""
+"""FastAPI application factory and main entry point.
+
+Agent Memory Cloud API - OpenAPI/Swagger Documentation
+=======================================================
+
+This API provides a comprehensive memory management system for AI agents,
+enabling persistent storage, semantic search, and intelligent retrieval
+of memories across workspaces.
+
+Authentication:
+- JWT Bearer tokens (for user sessions)
+- API Keys (for programmatic access, prefix: amc_)
+
+Rate Limits:
+- 60 requests/minute
+- 1000 requests/hour
+
+For interactive documentation, visit /v1/docs (Swagger UI) or /v1/redoc.
+"""
 
 import time
 from datetime import datetime, timezone
@@ -23,18 +41,156 @@ from app.core.metrics import metrics_store, record_request
 # Initialise structured logging as early as possible
 _root_logger = setup_logging()
 
+# OpenAPI Tags Metadata
+TAGS_METADATA = [
+    {
+        "name": "Authentication",
+        "description": """
+User authentication and session management.
+
+**Endpoints:**
+- Register new user accounts
+- Login with email/password
+- Refresh access tokens
+- Logout and revoke tokens
+- Get current user profile
+
+**Authentication Methods:**
+- JWT access tokens (expires in 30 minutes)
+- JWT refresh tokens (expires in 7 days)
+""",
+    },
+    {
+        "name": "Memories",
+        "description": """
+Memory CRUD operations with workspace isolation.
+
+**Memory Types:**
+- `outcome`: Results of completed tasks
+- `learning`: Knowledge gained from experiences
+- `preference`: User/agent preferences
+- `decision`: Important decisions made
+
+**Features:**
+- Content size limit: 10KB per memory
+- Tag-based categorization
+- Metadata support
+- Soft delete with recovery
+- Agent isolation (workspace-scoped access)
+""",
+    },
+    {
+        "name": "Hybrid Search",
+        "description": """
+Intelligent search combining keyword and vector similarity.
+
+**Scoring:**
+- Keyword score: PostgreSQL full-text search ranking
+- Vector score: Cosine similarity via pgvector
+- Combined score: Weighted blend (default: 40% keyword, 60% vector)
+
+**Performance:**
+- Target: <100ms p95 latency
+- HNSW index for fast vector search
+- Embedding cache for repeated queries
+""",
+    },
+    {
+        "name": "Agents & Projects",
+        "description": """
+Agent and project aggregation endpoints.
+
+**Features:**
+- List agents with memory counts
+- List projects with agent/memory statistics
+- Activity tracking (last memory timestamp)
+- Workspace-scoped isolation
+""",
+    },
+    {
+        "name": "Billing",
+        "description": """
+Stripe subscription management.
+
+**Tiers:**
+- `starter`: $99/month - Basic features
+- `pro`: $199/month - Full features with semantic search
+
+**Webhooks:**
+- Handles subscription lifecycle events
+- Signature verification required
+""",
+    },
+    {
+        "name": "Observability",
+        "description": "Health checks and metrics endpoints for monitoring.",
+    },
+    {
+        "name": "Root",
+        "description": "Root endpoint with API information.",
+    },
+]
+
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     logger = get_logger("amc.app")
 
     app = FastAPI(
-        title=settings.app_name,
+        title="Agent Memory Cloud API",
+        summary="Persistent memory management for AI agents with semantic search",
+        description="""
+# Agent Memory Cloud API
+
+A comprehensive memory management system for AI agents, enabling persistent
+storage, semantic search, and intelligent retrieval of memories.
+
+## Key Features
+
+- **Memory Storage**: Store agent memories with types, tags, and metadata
+- **Semantic Search**: Hybrid search combining keyword and vector similarity
+- **Workspace Isolation**: Multi-tenant architecture with agent isolation
+- **Subscription Billing**: Stripe-powered tiered pricing
+
+## Authentication
+
+All API endpoints require authentication via:
+- **JWT Bearer Token**: For user sessions (`Authorization: Bearer <token>`)
+- **API Key**: For programmatic access (`Authorization: Bearer amc_...`)
+
+## Rate Limits
+
+- 60 requests per minute
+- 1000 requests per hour
+
+## Error Handling
+
+Standardized error responses with codes:
+- `VALIDATION_ERROR`: Invalid input data
+- `NOT_FOUND`: Resource not found
+- `UNAUTHORIZED`: Authentication required
+- `FORBIDDEN`: Access denied (workspace isolation)
+- `CONTENT_TOO_LARGE`: Content exceeds 10KB limit
+""",
         version=settings.app_version,
         debug=settings.debug,
         openapi_url=f"{settings.api_v1_prefix}/openapi.json",
         docs_url=f"{settings.api_v1_prefix}/docs",
         redoc_url=f"{settings.api_v1_prefix}/redoc",
+        openapi_tags=TAGS_METADATA,
+        contact={
+            "name": "FainTech Lab",
+            "email": "support@faintech.ai",
+        },
+        license_info={
+            "name": "Proprietary",
+        },
+        servers=[
+            {
+                "url": "/v1",
+                "description": "Current server (relative)",
+            },
+        ],
     )
 
     # ------------------------------------------------------------------ #
