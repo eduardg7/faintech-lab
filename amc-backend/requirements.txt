@@ -1,13 +1,21 @@
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-sqlalchemy[asyncio]==2.0.25
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+sqlalchemy[asyncio]==2.0.35
+pydantic==2.9.2
+pydantic-settings==2.5.2
+aiosqlite==0.20.0
+python-dotenv==1.0.1
+alembic==1.13.3
+openai==1.35.3
+# pgvector for PostgreSQL vector similarity (production only, requires PostgreSQL extension)
+# Install manually for production: pip install pgvector asyncpg
+# Not auto-installed to keep dev environment lightweight (SQLite dev uses JSON fallback)
+pgvector==0.2.5
 asyncpg==0.29.0
-alembic==1.13.1
-pydantic==2.5.3
-pydantic-settings==2.1.0
+numpy>=1.24.0,<2.0.0
+# JWT Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 email-validator==2.1.0
-python-dotenv==1.0.0
 stripe==8.8.0

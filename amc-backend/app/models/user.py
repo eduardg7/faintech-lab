@@ -1,7 +1,7 @@
 """User model for JWT authentication."""
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from app.core.database import Base, generate_uuid
@@ -24,8 +24,8 @@ class User(Base):
     is_superuser = Column(Boolean, nullable=False, default=False)
 
     # Timestamps
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login_at = Column(DateTime, nullable=True)
 
     # Relationships
@@ -56,7 +56,7 @@ class RefreshToken(Base):
     revoked_at = Column(DateTime, nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=False)
 
     # Device/Session info
@@ -74,11 +74,11 @@ class RefreshToken(Base):
         """Check if refresh token is valid."""
         if self.is_revoked:
             return False
-        if self.expires_at and self.expires_at < datetime.utcnow():
+        if self.expires_at and self.expires_at < datetime.now(timezone.utc):
             return False
         return True
 
     def revoke(self) -> None:
         """Revoke this refresh token."""
         self.is_revoked = True
-        self.revoked_at = datetime.utcnow()
+        self.revoked_at = datetime.now(timezone.utc)
