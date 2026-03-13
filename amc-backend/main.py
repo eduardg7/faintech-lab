@@ -37,6 +37,11 @@ from app.core.errors import (
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.logging import setup_logging, get_logger
 from app.core.metrics import metrics_store, record_request
+from app.core.prometheus_middleware import (
+    PrometheusMiddleware,
+    metrics as prometheus_metrics,
+    set_app_info,
+)
 from app.middleware.error_handler import ErrorHandlingMiddleware
 
 # Initialise structured logging as early as possible
@@ -198,6 +203,12 @@ Standardized error responses with codes:
     # Middleware                                                           #
     # ------------------------------------------------------------------ #
 
+    # Prometheus metrics middleware - must be early to capture all requests
+    app.add_middleware(PrometheusMiddleware)
+
+    # Set app info for Prometheus metrics
+    set_app_info(version=settings.app_version, app_name=settings.app_name)
+
     # Error handling middleware - catches all unhandled exceptions
     app.add_middleware(ErrorHandlingMiddleware)
 
@@ -312,6 +323,20 @@ Standardized error responses with codes:
         snapshot["memories_total"] = memories_total
         return snapshot
 
+    @app.get("/metrics/prometheus", tags=["Observability"])
+    async def get_prometheus_metrics(request: Request):
+        """Prometheus-compatible metrics endpoint for monitoring systems.
+
+        Returns metrics in Prometheus text exposition format.
+        Metrics include:
+        - amc_http_requests_total: Total HTTP requests by method, endpoint, status
+        - amc_http_request_duration_seconds: Request latency histogram
+        - amc_http_errors_total: Total HTTP errors
+        - amc_http_active_connections: Current active connections
+        - amc_app_info: Application version and info
+        """
+        return await prometheus_metrics(request)
+
     @app.get("/", tags=["Root"])
     async def root():
         """Root endpoint with API information."""
@@ -335,6 +360,7 @@ Standardized error responses with codes:
     )
     from app.routers.semantic import router as semantic_router
     from app.routers.billing import router as billing_router
+    from app.routers.websocket import router as websocket_router
 
     app.include_router(memories_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
@@ -344,6 +370,8 @@ Standardized error responses with codes:
     app.include_router(auth_router, prefix=settings.api_v1_prefix)
     app.include_router(api_keys_router, prefix=settings.api_v1_prefix)
     app.include_router(billing_router, prefix=settings.api_v1_prefix)
+    # WebSocket router at root level (not under /v1 prefix)
+    app.include_router(websocket_router)
 
     logger.info(
         "startup",
