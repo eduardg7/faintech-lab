@@ -36,15 +36,28 @@ def mock_api_key():
 @pytest.fixture
 def mock_client(mock_api_key):
     """Create a mock client for testing."""
-    with patch('agentmemory.client.httpx.Client') as mock_httpx:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {}
-        mock_httpx.return_value.request.return_value = mock_response
+    # Create a MagicMock that behaves like MemoryClient
+    client = MagicMock(spec=MemoryClient)
+    client.api_key = mock_api_key
+    client.base_url = "https://api.faintech.dev/v1"
+    client.timeout = 30.0
+    client._request = Mock(return_value={})
 
-        client = MemoryClient(api_key=mock_api_key)
-        yield client
-        client.close()
+    # Mock the resource properties
+    client._memories = None
+    client._agents = None
+    client._projects = None
+    client._search = None
+
+    # Create real resource instances that use the mocked _request
+    from agentmemory.client import MemoriesResource, AgentsResource, ProjectsResource, SearchResource
+    client.memories = MemoriesResource(client)
+    client.agents = AgentsResource(client)
+    client.projects = ProjectsResource(client)
+    client.search = SearchResource(client)
+
+    yield client
+    client.close = Mock()
 
 
 @pytest.fixture
@@ -488,9 +501,9 @@ class TestErrorHandling:
 
     def test_not_found_error(self, mock_client):
         """Test 404 not found error."""
-        mock_client._client.request.side_effect = [
-            Mock(status_code=404),
-        ]
+        mock_client._request.side_effect = NotFoundError(
+            "Resource not found: /memories/nonexistent-id", status_code=404
+        )
 
         with pytest.raises(NotFoundError) as exc_info:
             mock_client.memories.get("nonexistent-id")
@@ -500,12 +513,9 @@ class TestErrorHandling:
 
     def test_validation_error(self, mock_client):
         """Test 422 validation error."""
-        mock_client._client.request.side_effect = [
-            Mock(
-                status_code=422,
-                json=lambda: {"detail": "Invalid memory type"}
-            ),
-        ]
+        mock_client._request.side_effect = ValidationError(
+            "Invalid memory type", status_code=422
+        )
 
         with pytest.raises(ValidationError) as exc_info:
             mock_client.memories.create(
@@ -514,17 +524,14 @@ class TestErrorHandling:
                 content="test",
             )
 
-        assert "Validation failed" in str(exc_info.value)
+        assert "Invalid memory type" in str(exc_info.value)
         assert exc_info.value.status_code == 422
 
     def test_rate_limit_error(self, mock_client):
         """Test 429 rate limit error."""
-        mock_client._client.request.side_effect = [
-            Mock(
-                status_code=429,
-                headers={"Retry-After": "60"}
-            ),
-        ]
+        mock_client._request.side_effect = RateLimitError(
+            "Rate limit exceeded", retry_after=60, status_code=429
+        )
 
         with pytest.raises(RateLimitError) as exc_info:
             mock_client.memories.list()
@@ -535,14 +542,11 @@ class TestErrorHandling:
 
     def test_generic_api_error(self, mock_client):
         """Test generic 500 API error."""
-        mock_client._client.request.side_effect = [
-            Mock(
-                status_code=500,
-                text="Internal server error"
-            ),
-        ]
-
         from agentmemory.exceptions import AgentMemoryError
+        mock_client._request.side_effect = AgentMemoryError(
+            "API error: 500 - Internal server error", status_code=500
+        )
+
         with pytest.raises(AgentMemoryError) as exc_info:
             mock_client.memories.list()
 

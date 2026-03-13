@@ -281,6 +281,18 @@ describe('MemoryType', () => {
 });
 
 describe('Error handling', () => {
+  let client: MemoryClient;
+
+  beforeEach(() => {
+    process.env['AGENT_MEMORY_API_KEY'] = 'test-api-key-12345';
+    mockFetch.mockClear();
+    client = new MemoryClient();
+  });
+
+  afterEach(() => {
+    delete process.env['AGENT_MEMORY_API_KEY'];
+  });
+
   it('should handle 401 authentication errors', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -293,7 +305,7 @@ describe('Error handling', () => {
       expect.fail('Should have thrown an error');
     } catch (error: any) {
       expect(error.message).toContain('Invalid API key');
-      expect(error.status_code).toBe(401);
+      expect(error.statusCode).toBe(401);
     }
   });
 
@@ -309,7 +321,7 @@ describe('Error handling', () => {
       expect.fail('Should have thrown an error');
     } catch (error: any) {
       expect(error.message).toContain('Resource not found');
-      expect(error.status_code).toBe(404);
+      expect(error.statusCode).toBe(404);
     }
   });
 
@@ -329,7 +341,7 @@ describe('Error handling', () => {
       expect.fail('Should have thrown an error');
     } catch (error: any) {
       expect(error.message).toContain('Invalid memory type');
-      expect(error.status_code).toBe(422);
+      expect(error.statusCode).toBe(422);
     }
   });
 
@@ -346,8 +358,8 @@ describe('Error handling', () => {
       expect.fail('Should have thrown an error');
     } catch (error: any) {
       expect(error.message).toContain('Rate limit exceeded');
-      expect(error.retry_after).toBe(60);
-      expect(error.status_code).toBe(429);
+      expect(error.retryAfter).toBe(60);
+      expect(error.statusCode).toBe(429);
     }
   });
 
@@ -363,7 +375,7 @@ describe('Error handling', () => {
       expect.fail('Should have thrown an error');
     } catch (error: any) {
       expect(error.message).toContain('API error: 500');
-      expect(error.status_code).toBe(500);
+      expect(error.statusCode).toBe(500);
     }
   });
 });
