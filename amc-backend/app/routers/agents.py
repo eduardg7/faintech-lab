@@ -62,11 +62,60 @@ class ProjectListResponse(BaseModel):
     "/agents",
     response_model=AgentListResponse,
     summary="List agents with activity aggregation",
-    description=(
-        "Returns a list of distinct agents derived from memory records in the caller's workspace. "
-        "Optionally filter by project_id for project isolation. "
-        "Each entry includes total memory count and timestamp of last activity."
-    ),
+    description="""
+Returns a list of distinct agents derived from memory records in the caller's workspace.
+
+## Authentication
+
+Requires Bearer token (JWT or API key). Results are scoped to the caller's workspace.
+
+## Features
+
+- Lists agents with memory counts and last activity timestamp
+- Optional filtering by project for project-level isolation
+- Ordered by most recent activity
+
+## Workspace Isolation
+
+Agents from other workspaces are never visible (agent isolation R-LAB-002).
+
+## Example Response
+
+```json
+{
+  "agents": [
+    {
+      "agent_id": "agent_001",
+      "project_id": "proj_abc",
+      "memory_count": 42,
+      "last_activity": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+""",
+    responses={
+        200: {
+            "description": "List of agents",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "agents": [
+                            {
+                                "agent_id": "agent_001",
+                                "project_id": "proj_abc",
+                                "memory_count": 42,
+                                "last_activity": "2024-01-15T10:30:00Z"
+                            }
+                        ],
+                        "total": 1
+                    }
+                }
+            }
+        },
+        401: {"description": "Authentication required"}
+    }
 )
 async def list_agents(
     project_id: Optional[str] = Query(None, description="Filter agents by project"),
@@ -132,11 +181,61 @@ async def list_agents(
     "/projects",
     response_model=ProjectListResponse,
     summary="List accessible projects",
-    description=(
-        "Returns all projects in the caller's workspace that have at least one memory record. "
-        "Includes agent count and total memory count per project. "
-        "Memories without a project_id are excluded."
-    ),
+    description="""
+Returns all projects in the caller's workspace that have at least one memory record.
+
+## Authentication
+
+Requires Bearer token (JWT or API key). Results are scoped to the caller's workspace.
+
+## Features
+
+- Lists projects with agent count and total memory count
+- Includes last activity timestamp per project
+- Ordered by most recent activity
+- Excludes memories without a project_id
+
+## Workspace Isolation
+
+Projects from other workspaces are never visible (agent isolation R-LAB-002).
+
+## Example Response
+
+```json
+{
+  "projects": [
+    {
+      "project_id": "proj_abc",
+      "agent_count": 3,
+      "memory_count": 127,
+      "last_activity": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+""",
+    responses={
+        200: {
+            "description": "List of projects",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "projects": [
+                            {
+                                "project_id": "proj_abc",
+                                "agent_count": 3,
+                                "memory_count": 127,
+                                "last_activity": "2024-01-15T10:30:00Z"
+                            }
+                        ],
+                        "total": 1
+                    }
+                }
+            }
+        },
+        401: {"description": "Authentication required"}
+    }
 )
 async def list_projects(
     limit: int = Query(

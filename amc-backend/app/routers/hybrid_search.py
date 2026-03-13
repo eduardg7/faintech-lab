@@ -78,18 +78,119 @@ async def _is_pgvector_enabled(db: AsyncSession) -> bool:
 @router.post(
     "/hybrid",
     response_model=HybridSearchResponse,
-    summary="Hybrid search combining keyword and vector similarity"
+    summary="Hybrid search combining keyword and vector similarity",
+    description="""
+Perform intelligent search combining PostgreSQL full-text search with vector similarity.
+
+## Scoring Algorithm
+
+```
+combined_score = (keyword_weight × keyword_score) + (vector_weight × vector_score)
+```
+
+- **Keyword Score**: Normalized ts_rank_cd from PostgreSQL full-text search
+- **Vector Score**: Cosine similarity via pgvector HNSW index
+- **Default Weights**: 40% keyword, 60% vector (semantic meaning prioritized)
+
+## Performance
+
+- Target: <100ms p95 latency on PostgreSQL with pgvector
+- HNSW index for fast approximate nearest neighbor search
+- Embedding cache for repeated queries
+
+## Response Fields
+
+- `results`: List of matching memories with scores
+- `query_time_ms`: Total query execution time
+- `keyword_time_ms`: Time spent on keyword search
+- `vector_time_ms`: Time spent on embedding + vector search
+- `embedding_cache_hit`: Whether query embedding was cached
+
+## Example
+
+```bash
+curl -X POST "/v1/search/hybrid?q=api%20authentication&min_score=0.5"
+```
+""",
+    responses={
+        200: {
+            "description": "Search results with relevance scores",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "results": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "workspace_id": "ws_abc123",
+                                "agent_id": "agent_001",
+                                "project_id": "proj_001",
+                                "memory_type": "learning",
+                                "content": "Authentication flow uses JWT tokens...",
+                                "tags": ["auth", "security"],
+                                "keyword_score": 0.85,
+                                "vector_score": 0.92,
+                                "combined_score": 0.892,
+                                "created_at": "2024-01-15T10:30:00Z"
+                            }
+                        ],
+                        "total": 1,
+                        "page": 1,
+                        "page_size": 10,
+                        "has_next": False,
+                        "query_time_ms": 45.2,
+                        "keyword_time_ms": 12.1,
+                        "vector_time_ms": 33.1,
+                        "embedding_cache_hit": False,
+                        "database_type": "postgres"
+                    }
+                }
+            }
+        }
+    }
 )
 async def hybrid_search(
-    q: str = Query(..., min_length=1, max_length=500, description="Search query"),
-    agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
-    project_id: Optional[str] = Query(None, description="Filter by project ID"),
-    tags: Optional[str] = Query(None, description="Comma-separated tags to filter"),
-    keyword_weight: float = Query(0.4, ge=0.0, le=1.0, description="Weight for keyword score"),
-    vector_weight: float = Query(0.6, ge=0.0, le=1.0, description="Weight for vector score"),
-    min_score: float = Query(0.3, ge=0.0, le=1.0, description="Minimum combined score"),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(10, ge=1, le=50, description="Items per page"),
+    q: str = Query(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Search query text (1-500 characters)",
+        example="how to implement user authentication"
+    ),
+    agent_id: Optional[str] = Query(
+        None,
+        description="Filter results to specific agent ID",
+        example="agent_001"
+    ),
+    project_id: Optional[str] = Query(
+        None,
+        description="Filter results to specific project ID",
+        example="proj_abc123"
+    ),
+    tags: Optional[str] = Query(
+        None,
+        description="Comma-separated list of tags to filter (OR logic)",
+        example="auth,security,api"
+    ),
+    keyword_weight: float = Query(
+        0.4,
+        ge=0.0,
+        le=1.0,
+        description="Weight for keyword matching score (0.0-1.0)"
+    ),
+    vector_weight: float = Query(
+        0.6,
+        ge=0.0,
+        le=1.0,
+        description="Weight for vector similarity score (0.0-1.0)"
+    ),
+    min_score: float = Query(
+        0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum combined score threshold (0.0-1.0)"
+    ),
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(10, ge=1, le=50, description="Results per page (max 50)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
