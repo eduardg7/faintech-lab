@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # Security
     api_key_header: str = "X-API-Key"
     jwt_secret_key: str  # JWT signing key - MUST be set in production
+    jwt_access_token_expire_minutes: int = 30
+    jwt_refresh_token_expire_days: int = 7
 
     # Content limits
     max_content_size_bytes: int = 10 * 1024  # 10KB
