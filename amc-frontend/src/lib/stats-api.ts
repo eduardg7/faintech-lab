@@ -245,3 +245,88 @@ export const mockProjectBreakdown: ProjectBreakdownResponse = {
   projects: [],
   total: 0,
 };
+
+// Per-agent dashboard stats
+export interface AgentDashboardStats {
+  agent_id: string;
+  total_memories: number;
+  memories_this_week: number;
+  pattern_count: number;
+  storage_used_mb: number;
+  by_type: {
+    outcome: number;
+    learning: number;
+    preference: number;
+    decision: number;
+  };
+  recent_activity: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+export const statsApi = {
+  ...statsApi,
+
+  async getAgentDashboardStats(token: string, agentId: string): Promise<AgentDashboardStats> {
+    const memories = await fetchAllMemories(token);
+
+    // Filter memories for this specific agent
+    const agentMemories = memories.filter((m) => m.agent_id === agentId);
+    const total = agentMemories.length;
+
+    // Calculate memories this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const memoriesThisWeek = agentMemories.filter(
+      (m) => new Date(m.created_at) >= oneWeekAgo
+    ).length;
+
+    // Calculate by type
+    const byType = { outcome: 0, learning: 0, preference: 0, decision: 0 };
+    for (const memory of agentMemories) {
+      byType[memory.memory_type] += 1;
+    }
+
+    // Calculate pattern count (unique tag combinations)
+    const tagPatterns = new Set<string>();
+    for (const memory of agentMemories) {
+      if (memory.tags && memory.tags.length > 0) {
+        tagPatterns.add(memory.tags.sort().join(','));
+      }
+    }
+    const patternCount = tagPatterns.size;
+
+    // Calculate recent activity (last 7 days)
+    const activityMap: Record<string, number> = {};
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      return date.toISOString().split('T')[0];
+    });
+
+    for (const date of dates) {
+      activityMap[date] = 0;
+    }
+
+    for (const memory of agentMemories) {
+      const date = memory.created_at.split('T')[0];
+      if (activityMap[date] !== undefined) {
+        activityMap[date] += 1;
+      }
+    }
+
+    return {
+      agent_id: agentId,
+      total_memories: total,
+      memories_this_week: memoriesThisWeek,
+      pattern_count: patternCount,
+      storage_used_mb: Math.round(total * 0.002 * 100) / 100,
+      by_type: byType,
+      recent_activity: dates.map((date) => ({
+        date,
+        count: activityMap[date] || 0,
+      })),
+    };
+  },
+};
