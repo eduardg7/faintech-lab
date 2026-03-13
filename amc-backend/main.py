@@ -37,6 +37,7 @@ from app.core.errors import (
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.logging import setup_logging, get_logger
 from app.core.metrics import metrics_store, record_request
+from app.middleware.error_handler import ErrorHandlingMiddleware
 
 # Initialise structured logging as early as possible
 _root_logger = setup_logging()
@@ -196,6 +197,9 @@ Standardized error responses with codes:
     # ------------------------------------------------------------------ #
     # Middleware                                                           #
     # ------------------------------------------------------------------ #
+
+    # Error handling middleware - catches all unhandled exceptions
+    app.add_middleware(ErrorHandlingMiddleware)
 
     # Rate limiting middleware
     app.add_middleware(
