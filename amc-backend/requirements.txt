@@ -21,3 +21,5 @@ email-validator==2.1.0
 stripe==8.8.0
 # Redis for rate limiting (production)
 redis==5.0.8
+# WebSocket support for real-time updates
+websockets==12.0

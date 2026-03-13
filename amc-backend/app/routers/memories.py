@@ -21,6 +21,7 @@ from app.core.errors import (
     ValidationError,
     DatabaseError,
 )
+from app.core.websocket import connection_manager
 from app.models.memory import Memory
 from app.routers.auth import AuthContext, get_current_auth_context
 from app.schemas.memory import (
@@ -89,7 +90,7 @@ async def create_memory(
     await db.refresh(db_memory)
 
     # Convert to response format
-    return MemoryResponse(
+    memory_response = MemoryResponse(
         id=db_memory.id,
         workspace_id=db_memory.workspace_id,
         agent_id=db_memory.agent_id,
@@ -103,6 +104,14 @@ async def create_memory(
         created_at=db_memory.created_at,
         updated_at=db_memory.updated_at,
     )
+
+    # Broadcast memory creation via WebSocket
+    await connection_manager.broadcast_memory_created(
+        workspace_id=auth_context.workspace_id,
+        memory_data=memory_response.dict(),
+    )
+
+    return memory_response
 
 
 @router.get(
@@ -325,7 +334,7 @@ async def update_memory(
     await db.commit()
     await db.refresh(memory)
 
-    return MemoryResponse(
+    memory_response = MemoryResponse(
         id=memory.id,
         workspace_id=memory.workspace_id,
         agent_id=memory.agent_id,
@@ -339,6 +348,14 @@ async def update_memory(
         created_at=memory.created_at,
         updated_at=memory.updated_at,
     )
+
+    # Broadcast memory update via WebSocket
+    await connection_manager.broadcast_memory_updated(
+        workspace_id=auth_context.workspace_id,
+        memory_data=memory_response.dict(),
+    )
+
+    return memory_response
 
 
 @router.delete(
@@ -376,5 +393,11 @@ async def delete_memory(
     # Soft delete
     memory.deleted_at = datetime.utcnow()
     await db.commit()
+
+    # Broadcast memory deletion via WebSocket
+    await connection_manager.broadcast_memory_deleted(
+        workspace_id=auth_context.workspace_id,
+        memory_id=memory_id,
+    )
 
     return None

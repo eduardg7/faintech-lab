@@ -335,6 +335,7 @@ Standardized error responses with codes:
     )
     from app.routers.semantic import router as semantic_router
     from app.routers.billing import router as billing_router
+    from app.routers.websocket import router as websocket_router
 
     app.include_router(memories_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
@@ -344,6 +345,8 @@ Standardized error responses with codes:
     app.include_router(auth_router, prefix=settings.api_v1_prefix)
     app.include_router(api_keys_router, prefix=settings.api_v1_prefix)
     app.include_router(billing_router, prefix=settings.api_v1_prefix)
+    # WebSocket router at root level (not under /v1 prefix)
+    app.include_router(websocket_router)
 
     logger.info(
         "startup",
