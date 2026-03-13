@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # Security
     api_key_header: str = "X-API-Key"
+    jwt_secret_key: str  # JWT signing key - MUST be set in production
 
     # Content limits
     max_content_size_bytes: int = 10 * 1024  # 10KB

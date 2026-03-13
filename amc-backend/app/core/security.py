@@ -30,7 +30,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # JWT Configuration
-JWT_SECRET_KEY = secrets.token_urlsafe(32)  # Generate on startup
+JWT_SECRET_KEY = settings.jwt_secret_key  # Loaded from environment
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour (AC requirement)
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
