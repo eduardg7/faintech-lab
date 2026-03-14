@@ -301,10 +301,10 @@ all_memories = []
 while True:
     memories = client.memories.list(limit=limit, offset=offset)
     all_memories.extend(memories)
-    
+
     if len(memories) < limit:
         break
-    
+
     offset += limit
 
 print(f"Total memories: {len(all_memories)}")
@@ -416,7 +416,7 @@ def get_relevant_context(user_query, agent_id, limit=5):
         agent_id=agent_id,
         limit=limit
     )
-    
+
     context = []
     for result in results:
         context.append({
@@ -424,7 +424,7 @@ def get_relevant_context(user_query, agent_id, limit=5):
             "relevance": result.score,
             "type": result.memory.memory_type
         })
-    
+
     return context
 
 # Use it

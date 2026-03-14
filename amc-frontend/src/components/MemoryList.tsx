@@ -2,11 +2,12 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { useState, useEffect, useRef } from 'react';
+import { api, Memory } from '@/lib/api';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import ErrorState from './ui/ErrorState';
 import LoadingState from './ui/LoadingState';
 import EmptyState from './ui/EmptyState';
+import DashboardStats from './ui/DashboardStats';
 import OnboardingShell from './dashboard/OnboardingShell';
 
 export default function MemoryList() {
@@ -75,6 +76,26 @@ export default function MemoryList() {
 
   const memories = searchQuery ? searchData?.results.map((r) => r.memory) : data?.memories;
   const hasActiveFilters = searchQuery || selectedType || selectedAgent;
+
+  // Calculate dashboard stats
+  const stats = useMemo(() => {
+    if (!data?.memories) {
+      return { memoryCount: 0, agentCount: 0, lastActivity: null };
+    }
+
+    const memoryCount = data.total || data.memories.length;
+    const uniqueAgents = new Set(data.memories.map((m) => m.agent_id));
+    const agentCount = uniqueAgents.size;
+
+    // Find most recent activity
+    const sortedByDate = [...data.memories].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    const lastActivity = sortedByDate[0]?.created_at || null;
+
+    return { memoryCount, agentCount, lastActivity };
+  }, [data]);
+
   const showOnboardingShell =
     !hasActiveFilters &&
     !isLoading &&
@@ -153,6 +174,16 @@ export default function MemoryList() {
           Logout
         </button>
       </div>
+
+      {/* Dashboard Stats */}
+      {!searchQuery && (
+        <DashboardStats
+          memoryCount={stats.memoryCount}
+          agentCount={stats.agentCount}
+          lastActivity={stats.lastActivity}
+          isLoading={isLoading}
+        />
+      )}
 
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">
@@ -234,50 +265,64 @@ export default function MemoryList() {
         />
       ) : memories && memories.length > 0 ? (
         <div className="space-y-4" role="list" aria-label="Memory list">
-          {memories.map((memory) => (
-            <article
-              key={memory.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              role="listitem"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded ${getTypeColor(
-                      memory.type
-                    )}`}
-                    aria-label={`Memory type: ${memory.type}`}
-                  >
-                    {memory.type}
-                  </span>
-                  <span className="text-xs text-gray-500" aria-label={`Agent ID: ${memory.agent_id}`}>
-                    {memory.agent_id}
-                  </span>
-                </div>
-                <time
-                  className="text-xs text-gray-400"
-                  dateTime={memory.created_at}
-                  aria-label={`Created at ${new Date(memory.created_at).toLocaleString()}`}
-                >
-                  {new Date(memory.created_at).toLocaleString()}
-                </time>
-              </div>
-              <p className="text-gray-700 mb-2">{memory.content}</p>
-              {memory.tags && memory.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1" role="list" aria-label="Tags">
-                  {memory.tags.map((tag) => (
+          {memories.map((memory, index) => {
+            const searchResult = searchQuery ? searchData?.results[index] : null;
+            const score = searchResult?.score;
+
+            return (
+              <article
+                key={memory.id}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                role="listitem"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      key={tag}
-                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
-                      role="listitem"
+                      className={`px-2 py-1 text-xs font-medium rounded ${getTypeColor(
+                        memory.type
+                      )}`}
+                      aria-label={`Memory type: ${memory.type}`}
                     >
-                      #{tag}
+                      {memory.type}
                     </span>
-                  ))}
+                    <span className="text-xs text-gray-500" aria-label={`Agent ID: ${memory.agent_id}`}>
+                      {memory.agent_id}
+                    </span>
+                    {score !== undefined && score !== null && (
+                      <span
+                        className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 text-yellow-800"
+                        aria-label={`Relevance score: ${(score * 100).toFixed(0)}%`}
+                        title="Search relevance score"
+                      >
+                        {(score * 100).toFixed(0)}% match
+                      </span>
+                    )}
+                  </div>
+                  <time
+                    className="text-xs text-gray-400"
+                    dateTime={memory.created_at}
+                    aria-label={`Created at ${new Date(memory.created_at).toLocaleString()}`}
+                  >
+                    {new Date(memory.created_at).toLocaleString()}
+                  </time>
                 </div>
-              )}
-            </article>
-          ))}
+                <p className="text-gray-700 mb-2">{memory.content}</p>
+                {memory.tags && memory.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1" role="list" aria-label="Tags">
+                    {memory.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
+                        role="listitem"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       ) : (
         <EmptyState

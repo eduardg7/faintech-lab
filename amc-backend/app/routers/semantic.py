@@ -74,21 +74,21 @@ async def semantic_search(
 ):
     """
     Semantic search using vector embeddings.
-    
+
     - **query**: Search query text
     - **limit**: Max results (default: 10, max: 50)
     - **min_similarity**: Minimum similarity threshold (default: 0.5)
-    
+
     Returns results ranked by cosine similarity to query embedding.
     """
     start_time = time.perf_counter()
     cache = get_cache_service()
-    
+
     # Try to get cached embedding first
     embed_start = time.perf_counter()
     cache_hit = False
     query_embedding = await cache.get_embedding(request.query)
-    
+
     if query_embedding is None:
         # Generate embedding for query
         embedding_service = get_embedding_service()
@@ -98,9 +98,9 @@ async def semantic_search(
         await cache.set_embedding(request.query, query_embedding)
     else:
         cache_hit = True
-    
+
     embedding_time = (time.perf_counter() - embed_start) * 1000
-    
+
     # TODO: Migrate to pgvector for production (TD-015)
     # Current implementation uses Python cosine similarity for SQLite compatibility
     # Load all memories with embeddings (temporary workaround)
@@ -132,10 +132,10 @@ async def semantic_search(
 
     # Sort by similarity (descending)
     scored_memories.sort(key=lambda x: x[1], reverse=True)
-    
+
     # Calculate total before pagination
     total = len(scored_memories)
-    
+
     # Apply pagination
     offset = (request.page - 1) * request.page_size
     paginated_memories = scored_memories[offset:offset + request.page_size]
@@ -155,7 +155,7 @@ async def semantic_search(
             similarity_score=float(similarity),
             created_at=memory.created_at
         ))
-    
+
     # Calculate total time
     query_time_ms = (time.perf_counter() - start_time) * 1000
 
@@ -184,7 +184,7 @@ async def queue_embedding_job(
 ):
     """
     Queue background job to generate embeddings for existing memories.
-    
+
     - **memory_ids**: List of memory IDs to embed
     """
     # Verify memories exist
@@ -194,20 +194,20 @@ async def queue_embedding_job(
             Memory.deleted_at.is_(None)
         )
     )
-    
+
     result = await db.execute(query)
     memories = result.scalars().all()
-    
+
     if not memories:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No memories found with IDs: {request.memory_ids}"
         )
-    
+
     # Create job ID
     import uuid
     job_id = str(uuid.uuid4())
-    
+
     # Add to job queue
     from app.core.jobs import BackgroundJob
     job_queue = get_job_queue()
@@ -219,14 +219,14 @@ async def queue_embedding_job(
             'count': len(memories)
         }
     ))
-    
+
     # Schedule background task
     background_tasks.add_task(
         _process_embedding_job,
         job_id=job_id,
         memory_ids=request.memory_ids
     )
-    
+
     return EmbedJobResponse(
         job_id=job_id,
         message=f"Queued embedding job for {len(memories)} memories"
@@ -237,7 +237,7 @@ async def _process_embedding_job(job_id: str, memory_ids: List[str]):
     """Background task to process embedding job."""
     job_queue = get_job_queue()
     embedding_service = get_embedding_service()
-    
+
     try:
         # TODO: Load memories from database and generate embeddings
         # This is a placeholder - actual implementation would:
@@ -245,12 +245,12 @@ async def _process_embedding_job(job_id: str, memory_ids: List[str]):
         # 2. Generate embeddings in batches
         # 3. Update memory records with embeddings
         # 4. Track cost
-        
+
         job_queue.complete_job(job_id, {
             'embedded_count': len(memory_ids),
             'status': 'completed'
         })
-        
+
     except Exception as e:
         job_queue.fail_job(job_id, str(e))
 
@@ -264,16 +264,16 @@ async def get_job_status(
 ):
     """
     Get status of an embedding job.
-    
+
     - **job_id**: Job ID from /embed endpoint
     """
     job_queue = get_job_queue()
     job = job_queue.get_job(job_id)
-    
+
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job {job_id} not found"
         )
-    
+
     return job.to_dict()

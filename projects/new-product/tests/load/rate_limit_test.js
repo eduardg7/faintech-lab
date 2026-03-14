@@ -24,7 +24,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
 
 export default function () {
   const agentId = `rate-test-agent-${__VU}`;
-  
+
   const payload = JSON.stringify({
     agent_id: agentId,
     project_id: 'rate-test-project',
@@ -39,11 +39,11 @@ export default function () {
   };
 
   const res = http.post(`${BASE_URL}/api/v1/memories/`, payload, params);
-  
+
   // Check for rate limiting (429 status)
   const isRateLimited = res.status === 429;
   const isSuccess = res.status === 201 || res.status === 200;
-  
+
   check(res, {
     'status is 201, 200, or 429': (r) => isSuccess || isRateLimited,
     'rate limit headers present': (r) => {

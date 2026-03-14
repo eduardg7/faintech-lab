@@ -27,7 +27,7 @@ SDKs are automatically published when you create a GitHub release.
    # Python SDK
    cd sdks/python
    # Edit version in pyproject.toml
-   
+
    # TypeScript SDK
    cd sdks/typescript
    # Edit version in package.json

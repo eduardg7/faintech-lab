@@ -10,7 +10,7 @@ interface AgentActivityTimelineProps {
 export default function AgentActivityTimeline({ agents, isLoading }: AgentActivityTimelineProps) {
   if (isLoading) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="status"
         aria-live="polite"
@@ -27,7 +27,7 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
 
   if (!agents || agents.length === 0) {
     return (
-      <div 
+      <div
         className="bg-white border border-gray-200 rounded-lg p-6"
         role="alert"
         aria-live="polite"
@@ -53,7 +53,7 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
-    
+
     if (diffMins < 60) {
       return `${diffMins}m ago`;
     } else if (diffHours < 24) {
@@ -77,14 +77,14 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
   };
 
   return (
-    <div 
+    <div
       className="bg-white border border-gray-200 rounded-lg p-6"
       role="region"
       aria-labelledby="agent-activity-title"
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 
+          <h2
             id="agent-activity-title"
             className="text-lg font-semibold text-gray-900"
           >
@@ -100,7 +100,7 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
       </div>
 
       {/* Timeline Grid */}
-      <div 
+      <div
         className="mb-6"
         role="img"
         aria-label="Agent activity timeline visualization showing memory creation over the past 7 days"
@@ -115,20 +115,20 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
         </div>
 
         {/* Agent Rows */}
-        <div 
+        <div
           className="space-y-3"
           role="list"
           aria-label="Agent activity breakdown"
         >
           {agents.map((agent, index) => (
-            <div 
+            <div
               key={agent.agent_id}
               className="flex items-center gap-3"
               role="listitem"
             >
               {/* Agent Label */}
               <div className="w-24 flex items-center gap-2">
-                <div 
+                <div
                   className={`w-2 h-2 rounded-full ${getAgentColor(index)}`}
                   aria-hidden="true"
                 />
@@ -138,19 +138,19 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
               </div>
 
               {/* Timeline Bars */}
-              <div 
+              <div
                 className="flex-1 flex items-end gap-1 h-8"
                 role="img"
                 aria-label={`${agent.agent_id}: ${agent.activity_timeline.map(t => `${t.count} on ${t.date}`).join(', ')}`}
               >
                 {agent.activity_timeline.map((t, i) => (
-                  <div 
+                  <div
                     key={`${t.date}-${i}`}
                     className="flex-1 flex items-end justify-center"
                   >
                     <div
                       className={`w-full max-w-[24px] ${getAgentColor(index)} rounded-t transition-all duration-300`}
-                      style={{ 
+                      style={{
                         height: `${Math.max(4, (t.count / maxCount) * 100)}%`,
                         minHeight: '4px'
                       }}
@@ -170,18 +170,18 @@ export default function AgentActivityTimeline({ agents, isLoading }: AgentActivi
       </div>
 
       {/* Legend */}
-      <div 
+      <div
         className="flex flex-wrap gap-3 pt-4 border-t border-gray-100"
         role="list"
         aria-label="Agent legend"
       >
         {agents.map((agent, index) => (
-          <div 
+          <div
             key={agent.agent_id}
             className="flex items-center gap-2"
             role="listitem"
           >
-            <div 
+            <div
               className={`w-2 h-2 rounded-full ${getAgentColor(index)}`}
               aria-hidden="true"
             />
