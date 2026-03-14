@@ -1,54 +1,94 @@
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
+import { Rate, Trend, Counter } from 'k6/metrics';
 
-// Spike test - sudden load increase
+const BASE_URL = (__ENV.BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+const AUTH_PREFIX = `${BASE_URL}/v1/auth`;
+const API_PREFIX = `${BASE_URL}/v1`;
+const TEST_PASSWORD = __ENV.TEST_PASSWORD || 'LoadTestPass123!';
+const TEST_RUN_ID = __ENV.TEST_RUN_ID || `lt-${Date.now()}`;
+
+function userEmail(vu) {
+  return `loadtest+${TEST_RUN_ID}-${vu}@example.com`;
+}
+
+function registerAndLogin(vu) {
+  const email = userEmail(vu);
+  const registerPayload = JSON.stringify({
+    email,
+    password: TEST_PASSWORD,
+    full_name: `Load Test User ${vu}`,
+    workspace_name: `Load Test Workspace ${TEST_RUN_ID}-${vu}`,
+  });
+
+  const commonParams = { headers: { 'Content-Type': 'application/json' } };
+  let registerRes = http.post(`${AUTH_PREFIX}/register`, registerPayload, commonParams);
+  if (![201, 409].includes(registerRes.status)) {
+    return { ok: false, token: null, user: null, registerStatus: registerRes.status };
+  }
+
+  const loginRes = http.post(
+    `${AUTH_PREFIX}/login`,
+    JSON.stringify({ email, password: TEST_PASSWORD }),
+    commonParams,
+  );
+
+  if (loginRes.status !== 200) {
+    return { ok: false, token: null, user: null, loginStatus: loginRes.status };
+  }
+
+  const body = JSON.parse(loginRes.body);
+  return { ok: true, token: body.access_token, user: body.user };
+}
+
+function authHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 export const options = {
   stages: [
-    // Start with 10 users
     { duration: '1m', target: 10 },
-    // Spike to 1000 users in 5 seconds
     { duration: '5s', target: 1000 },
-    // Stay at 1000 for 10 seconds
     { duration: '10s', target: 1000 },
-    // Quick ramp down
     { duration: '30s', target: 0 },
   ],
   thresholds: {
-    http_req_duration: ['p(99)<500'], // Allow higher latency during spike
-    http_req_failed: ['rate<0.1'], // Allow up to 10% failures during spike
+    http_req_duration: ['p(99)<500'],
+    http_req_failed: ['rate<0.1'],
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-
 export default function () {
+  const auth = registerAndLogin(__VU);
+  if (!auth.ok) return;
+
+  const headers = { headers: authHeaders(auth.token) };
+  const agentId = `spike-agent-${__VU}`;
+  const projectId = `spike-project-${Math.floor(__VU % 20)}`;
+
   const endpoints = [
     () => http.get(`${BASE_URL}/health`),
-    () => http.get(`${BASE_URL}/api/v1/memories/agent/test-agent-${__VU}?limit=10`),
+    () => http.get(`${API_PREFIX}/memories?agent_id=${agentId}&project_id=${projectId}&page_size=10`, headers),
     () => http.post(
-      `${BASE_URL}/api/v1/memories/`,
+      `${API_PREFIX}/memories`,
       JSON.stringify({
-        agent_id: `spike-agent-${__VU}`,
-        project_id: 'spike-test',
-        type: 'observation',
+        agent_id: agentId,
+        project_id: projectId,
+        memory_type: 'learning',
         content: `Spike test ${Date.now()}`,
+        tags: ['spike-test'],
+        metadata: { vu: __VU, iter: __ITER },
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      headers,
     ),
   ];
 
-  // Randomly select an endpoint to test
   const endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
   const res = endpoint();
-
   check(res, {
-    'status is 2xx or 429': (r) => r.status >= 200 && r.status < 300 || r.status === 429,
+    'status is 2xx or 429': (r) => (r.status >= 200 && r.status < 300) || r.status === 429,
   });
-}
-
-export function handleSummary(data) {
-  return {
-    'stdout': JSON.stringify(data, null, 2),
-    'spike-test-results.json': JSON.stringify(data, null, 2),
-  };
 }

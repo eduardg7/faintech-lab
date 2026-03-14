@@ -131,7 +131,10 @@ def create_refresh_token(
     # Hash for storage (we don't store raw tokens)
     token_hash = hashlib.sha256(encoded_jwt.encode()).hexdigest()
 
-    return encoded_jwt, token_hash, expire
+    # Persist DB-facing expiry as naive UTC to match the current SQLAlchemy model columns.
+    expires_at = expire.astimezone(timezone.utc).replace(tzinfo=None)
+
+    return encoded_jwt, token_hash, expires_at
 
 
 def decode_token(token: str) -> Optional[Dict[str, Any]]:

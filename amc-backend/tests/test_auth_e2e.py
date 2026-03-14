@@ -111,7 +111,7 @@ class TestAuthRegisterE2E:
     """E2E tests for registration flow."""
 
     @pytest.mark.asyncio
-    async def test_register_success(self, client: AsyncClient):
+    async def test_register_success(self, client: AsyncClient, test_session: AsyncSession):
         """Test successful user registration."""
         response = await client.post("/v1/auth/register", json={
             "email": "newuser@example.com",
