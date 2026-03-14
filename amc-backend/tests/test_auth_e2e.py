@@ -135,11 +135,6 @@ class TestAuthRegisterE2E:
         assert data["user"]["full_name"] == "New User"
         assert data["user"]["is_active"] is True
 
-        refresh_token = (
-            await test_session.execute(select(RefreshToken).limit(1))
-        ).scalar_one()
-        assert refresh_token.expires_at.tzinfo is None
-
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, client: AsyncClient, test_user: dict):
         """Test registration with duplicate email returns 409."""

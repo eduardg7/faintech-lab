@@ -91,8 +91,12 @@ export default function () {
 
 function testHealthEndpoint() {
   const res = http.get(`${BASE_URL}/health`);
-  const success = check(res, { 'health check status is 200': (r) => r.status === 200 });
-  recordMetrics(res, !success);
+
+  check(res, {
+    'health check status is 200': (r) => r.status === 200,
+  });
+
+  recordMetrics(res);
 }
 
 function testCreateMemory(agentId, projectId, params) {
@@ -105,16 +109,65 @@ function testCreateMemory(agentId, projectId, params) {
     metadata: { test_run: true, vu: __VU, iter: __ITER },
   });
 
-  const res = http.post(`${API_PREFIX}/memories`, payload, params);
+  const params = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const res = http.post(`${BASE_URL}/api/v1/memories/`, payload, params);
+
   const success = check(res, {
     'create memory status is 201': (r) => r.status === 201,
     'create memory has id': (r) => JSON.parse(r.body).id !== undefined,
   });
+
+  recordMetrics(res, !success);
+
+  if (success) {
+    try {
+      const body = JSON.parse(res.body);
+      return body.id;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function testSearchMemories(agentId) {
+  const payload = JSON.stringify({
+    query: 'load test',
+    agent_id: agentId,
+    limit: 10,
+  });
+
+  const params = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const res = http.post(`${BASE_URL}/api/v1/memories/search`, payload, params);
+
+  const success = check(res, {
+    'search memories status is 200': (r) => r.status === 200,
+    'search memories has results': (r) => {
+      try {
+        const body = JSON.parse(r.body);
+        return body.memories !== undefined && Array.isArray(body.memories);
+      } catch {
+        return false;
+      }
+    },
+  });
+
   recordMetrics(res, !success);
 }
 
-function testListMemories(agentId, projectId, params) {
-  const res = http.get(`${API_PREFIX}/memories?agent_id=${agentId}&project_id=${projectId}&page_size=20`, params);
+function testGetAgentMemories(agentId) {
+  const res = http.get(`${BASE_URL}/api/v1/memories/agent/${agentId}?limit=20`);
+
   const success = check(res, {
     'list memories status is 200': (r) => r.status === 200,
     'list memories has array': (r) => Array.isArray(JSON.parse(r.body).memories),
@@ -122,8 +175,9 @@ function testListMemories(agentId, projectId, params) {
   recordMetrics(res, !success);
 }
 
-function testKeywordSearch(projectId, params) {
-  const res = http.get(`${API_PREFIX}/search/keyword?q=Load%20test&project_id=${projectId}&page_size=10`, params);
+function testGetTaskMemories(projectId, taskId) {
+  const res = http.get(`${BASE_URL}/api/v1/memories/task/${projectId}/${taskId}?limit=50`);
+
   const success = check(res, {
     'keyword search status is 200': (r) => r.status === 200,
     'keyword search has results array': (r) => Array.isArray(JSON.parse(r.body).results),
@@ -135,4 +189,49 @@ function recordMetrics(res, isError = false) {
   errorRate.add(isError ? 1 : 0);
   latencyTrend.add(res.timings.duration);
   requestCounter.add(1);
+}
+
+export function handleSummary(data) {
+  return {
+    'stdout': textSummary(data, { indent: ' ', enableColors: true }),
+    'load-test-results.json': JSON.stringify(data, null, 2),
+  };
+}
+
+function textSummary(data, options = {}) {
+  const indent = options.indent || '  ';
+  const colors = options.enableColors || false;
+
+  let summary = '\n' + '='.repeat(60) + '\n';
+  summary += 'LOAD TEST SUMMARY\n';
+  summary += '='.repeat(60) + '\n\n';
+
+  // Overall metrics
+  summary += `${indent}Total Requests: ${data.metrics.requests?.values?.count || 0}\n`;
+  summary += `${indent}Request Rate: ${data.metrics.http_reqs?.values?.rate?.toFixed(2) || 0} req/s\n`;
+  summary += `${indent}Error Rate: ${(data.metrics.errors?.values?.rate * 100 || 0).toFixed(2)}%\n`;
+  summary += '\n';
+
+  // Latency metrics
+  summary += `${indent}Latency (ms):\n`;
+  summary += `${indent}${indent}Avg: ${data.metrics.http_req_duration?.values?.avg?.toFixed(2) || 0}\n`;
+  summary += `${indent}${indent}Min: ${data.metrics.http_req_duration?.values?.min?.toFixed(2) || 0}\n`;
+  summary += `${indent}${indent}Max: ${data.metrics.http_req_duration?.values?.max?.toFixed(2) || 0}\n`;
+  summary += `${indent}${indent}P90: ${data.metrics.http_req_duration?.values?.['p(90)']?.toFixed(2) || 0}\n`;
+  summary += `${indent}${indent}P95: ${data.metrics.http_req_duration?.values?.['p(95)']?.toFixed(2) || 0}\n`;
+  summary += `${indent}${indent}P99: ${data.metrics.http_req_duration?.values?.['p(99)']?.toFixed(2) || 0}\n`;
+  summary += '\n';
+
+  // Threshold checks
+  summary += `${indent}Threshold Checks:\n`;
+  if (data.root_group?.checks) {
+    const checks = data.root_group.checks;
+    const passed = checks.filter(c => c.passes > 0 && c.fails === 0).length;
+    const total = checks.length;
+    summary += `${indent}${indent}Passed: ${passed}/${total}\n`;
+  }
+
+  summary += '\n' + '='.repeat(60) + '\n';
+
+  return summary;
 }

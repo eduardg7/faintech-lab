@@ -1,21 +1,141 @@
-"""FastAPI application factory and main entry point."""
+"""FastAPI application factory and main entry point.
+
+Agent Memory Cloud API - OpenAPI/Swagger Documentation
+=======================================================
+
+This API provides a comprehensive memory management system for AI agents,
+enabling persistent storage, semantic search, and intelligent retrieval
+of memories across workspaces.
+
+Authentication:
+- JWT Bearer tokens (for user sessions)
+- API Keys (for programmatic access, prefix: amc_)
+
+Rate Limits:
+- 60 requests/minute
+- 1000 requests/hour
+
+For interactive documentation, visit /v1/docs (Swagger UI) or /v1/redoc.
+"""
 
 import time
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from config import settings
-from app.core.errors import amc_error_handler, generic_error_handler, AMCError
+from app.core.errors import (
+    AMCError,
+    amc_error_handler,
+    generic_error_handler,
+    request_validation_error_handler,
+)
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.logging import setup_logging, get_logger
 from app.core.metrics import metrics_store, record_request
+from app.core.prometheus_middleware import (
+    PrometheusMiddleware,
+    metrics as prometheus_metrics,
+    set_app_info,
+)
+from app.middleware.error_handler import ErrorHandlingMiddleware
 
 # Initialise structured logging as early as possible
 _root_logger = setup_logging()
+
+# OpenAPI Tags Metadata
+TAGS_METADATA = [
+    {
+        "name": "Authentication",
+        "description": """
+User authentication and session management.
+
+**Endpoints:**
+- Register new user accounts
+- Login with email/password
+- Refresh access tokens
+- Logout and revoke tokens
+- Get current user profile
+
+**Authentication Methods:**
+- JWT access tokens (expires in 30 minutes)
+- JWT refresh tokens (expires in 7 days)
+""",
+    },
+    {
+        "name": "Memories",
+        "description": """
+Memory CRUD operations with workspace isolation.
+
+**Memory Types:**
+- `outcome`: Results of completed tasks
+- `learning`: Knowledge gained from experiences
+- `preference`: User/agent preferences
+- `decision`: Important decisions made
+
+**Features:**
+- Content size limit: 10KB per memory
+- Tag-based categorization
+- Metadata support
+- Soft delete with recovery
+- Agent isolation (workspace-scoped access)
+""",
+    },
+    {
+        "name": "Hybrid Search",
+        "description": """
+Intelligent search combining keyword and vector similarity.
+
+**Scoring:**
+- Keyword score: PostgreSQL full-text search ranking
+- Vector score: Cosine similarity via pgvector
+- Combined score: Weighted blend (default: 40% keyword, 60% vector)
+
+**Performance:**
+- Target: <100ms p95 latency
+- HNSW index for fast vector search
+- Embedding cache for repeated queries
+""",
+    },
+    {
+        "name": "Agents & Projects",
+        "description": """
+Agent and project aggregation endpoints.
+
+**Features:**
+- List agents with memory counts
+- List projects with agent/memory statistics
+- Activity tracking (last memory timestamp)
+- Workspace-scoped isolation
+""",
+    },
+    {
+        "name": "Billing",
+        "description": """
+Stripe subscription management.
+
+**Tiers:**
+- `starter`: $99/month - Basic features
+- `pro`: $199/month - Full features with semantic search
+
+**Webhooks:**
+- Handles subscription lifecycle events
+- Signature verification required
+""",
+    },
+    {
+        "name": "Observability",
+        "description": "Health checks and metrics endpoints for monitoring.",
+    },
+    {
+        "name": "Root",
+        "description": "Root endpoint with API information.",
+    },
+]
 
 
 def create_app() -> FastAPI:
@@ -23,17 +143,74 @@ def create_app() -> FastAPI:
     logger = get_logger("amc.app")
 
     app = FastAPI(
-        title=settings.app_name,
+        title="Agent Memory Cloud API",
+        summary="Persistent memory management for AI agents with semantic search",
+        description="""
+# Agent Memory Cloud API
+
+A comprehensive memory management system for AI agents, enabling persistent
+storage, semantic search, and intelligent retrieval of memories.
+
+## Key Features
+
+- **Memory Storage**: Store agent memories with types, tags, and metadata
+- **Semantic Search**: Hybrid search combining keyword and vector similarity
+- **Workspace Isolation**: Multi-tenant architecture with agent isolation
+- **Subscription Billing**: Stripe-powered tiered pricing
+
+## Authentication
+
+All API endpoints require authentication via:
+- **JWT Bearer Token**: For user sessions (`Authorization: Bearer <token>`)
+- **API Key**: For programmatic access (`Authorization: Bearer amc_...`)
+
+## Rate Limits
+
+- 60 requests per minute
+- 1000 requests per hour
+
+## Error Handling
+
+Standardized error responses with codes:
+- `VALIDATION_ERROR`: Invalid input data
+- `NOT_FOUND`: Resource not found
+- `UNAUTHORIZED`: Authentication required
+- `FORBIDDEN`: Access denied (workspace isolation)
+- `CONTENT_TOO_LARGE`: Content exceeds 10KB limit
+""",
         version=settings.app_version,
         debug=settings.debug,
         openapi_url=f"{settings.api_v1_prefix}/openapi.json",
         docs_url=f"{settings.api_v1_prefix}/docs",
         redoc_url=f"{settings.api_v1_prefix}/redoc",
+        openapi_tags=TAGS_METADATA,
+        contact={
+            "name": "FainTech Lab",
+            "email": "support@faintech.ai",
+        },
+        license_info={
+            "name": "Proprietary",
+        },
+        servers=[
+            {
+                "url": "/v1",
+                "description": "Current server (relative)",
+            },
+        ],
     )
 
     # ------------------------------------------------------------------ #
     # Middleware                                                           #
     # ------------------------------------------------------------------ #
+
+    # Prometheus metrics middleware - must be early to capture all requests
+    app.add_middleware(PrometheusMiddleware)
+
+    # Set app info for Prometheus metrics
+    set_app_info(version=settings.app_version, app_name=settings.app_name)
+
+    # Error handling middleware - catches all unhandled exceptions
+    app.add_middleware(ErrorHandlingMiddleware)
 
     # Rate limiting middleware
     app.add_middleware(
@@ -86,6 +263,7 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------ #
 
     app.add_exception_handler(AMCError, amc_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, request_validation_error_handler)
     app.add_exception_handler(Exception, generic_error_handler)
 
     # ------------------------------------------------------------------ #
@@ -145,6 +323,20 @@ def create_app() -> FastAPI:
         snapshot["memories_total"] = memories_total
         return snapshot
 
+    @app.get("/metrics/prometheus", tags=["Observability"])
+    async def get_prometheus_metrics(request: Request):
+        """Prometheus-compatible metrics endpoint for monitoring systems.
+
+        Returns metrics in Prometheus text exposition format.
+        Metrics include:
+        - amc_http_requests_total: Total HTTP requests by method, endpoint, status
+        - amc_http_request_duration_seconds: Request latency histogram
+        - amc_http_errors_total: Total HTTP errors
+        - amc_http_active_connections: Current active connections
+        - amc_app_info: Application version and info
+        """
+        return await prometheus_metrics(request)
+
     @app.get("/", tags=["Root"])
     async def root():
         """Root endpoint with API information."""
@@ -164,15 +356,22 @@ def create_app() -> FastAPI:
         auth_router,
         memories_router,
         search_router,
+        hybrid_search_router,
     )
     from app.routers.semantic import router as semantic_router
+    from app.routers.billing import router as billing_router
+    from app.routers.websocket import router as websocket_router
 
     app.include_router(memories_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=settings.api_v1_prefix)
     app.include_router(semantic_router, prefix=settings.api_v1_prefix)
+    app.include_router(hybrid_search_router, prefix=settings.api_v1_prefix)
     app.include_router(agents_router, prefix=settings.api_v1_prefix)
     app.include_router(auth_router, prefix=settings.api_v1_prefix)
     app.include_router(api_keys_router, prefix=settings.api_v1_prefix)
+    app.include_router(billing_router, prefix=settings.api_v1_prefix)
+    # WebSocket router at root level (not under /v1 prefix)
+    app.include_router(websocket_router)
 
     logger.info(
         "startup",

@@ -298,11 +298,11 @@ const allMemories = [];
 while (true) {
   const response = await client.memories.list({ limit, offset });
   allMemories.push(...response.items);
-  
+
   if (!hasMore(response)) {
     break;
   }
-  
+
   offset += limit;
 }
 
@@ -312,12 +312,12 @@ console.log(`Total memories: ${allMemories.length}`);
 ### Error Handling
 
 ```typescript
-import { 
-  MemoryClient, 
-  NotFoundError, 
+import {
+  MemoryClient,
+  NotFoundError,
   ValidationError,
   AuthenticationError,
-  RateLimitError 
+  RateLimitError
 } from '@agentmemory/sdk';
 
 const client = new MemoryClient();

@@ -6,6 +6,8 @@ Load testing and performance validation for AMC API to validate 100 req/sec targ
 ## Requirements
 - Python 3.11+
 - Locust (installed via requirements-test.txt)
+- Optional env file: `load_tests/.env.loadtest` copied from `.env.loadtest.example`
+- Preferred runner: `../scripts/run-load-tests.sh`
 
 ## Test Scenarios
 
@@ -34,15 +36,20 @@ Load testing and performance validation for AMC API to validate 100 req/sec targ
 
 ### Quick validation (1 min)
 ```bash
-locust -f locustfile.py --headless -u 10 -r 10 -t 60s --host http://localhost:8000
+../scripts/run-load-tests.sh smoke
 ```
 
 ### Full load test (5 min)
 ```bash
-locust -f locustfile.py --headless -u 100 -r 10 -t 300s --host http://localhost:8000
+../scripts/run-load-tests.sh full
 ```
 
-### With HTML report
+### Custom run with overrides
+```bash
+AMC_LOADTEST_HOST=http://localhost:8000 AMC_LOADTEST_USERS=25 AMC_LOADTEST_DURATION=120s ../scripts/run-load-tests.sh custom
+```
+
+### Direct Locust fallback
 ```bash
 locust -f locustfile.py --headless -u 100 -r 10 -t 300s --host http://localhost:8000 --html report.html
 ```

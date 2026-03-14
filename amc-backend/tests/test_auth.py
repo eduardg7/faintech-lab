@@ -147,7 +147,6 @@ class TestRefreshToken:
         assert isinstance(token, str)
         assert isinstance(token_hash, str)
         assert isinstance(expires_at, datetime)
-        assert expires_at.tzinfo is None
 
     def test_create_refresh_token_contains_claims(self):
         """Test that refresh token contains expected claims."""

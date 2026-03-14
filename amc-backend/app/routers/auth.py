@@ -106,7 +106,7 @@ async def _get_api_key_context(
     if not api_key.is_valid:
         return None
 
-    api_key.last_used_at = datetime.utcnow()
+    api_key.last_used_at = datetime.now(timezone.utc)
     await db.flush()
 
     return AuthContext(workspace_id=workspace.id, api_key=api_key)
@@ -284,7 +284,7 @@ async def login(
         )
 
     # Update last login
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
 
     # Create tokens
     access_token = create_access_token(

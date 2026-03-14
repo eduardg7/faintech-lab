@@ -10,11 +10,16 @@ openai==1.35.3
 # pgvector for PostgreSQL vector similarity (production only, requires PostgreSQL extension)
 # Install manually for production: pip install pgvector asyncpg
 # Not auto-installed to keep dev environment lightweight (SQLite dev uses JSON fallback)
-# pgvector==0.2.5
-# asyncpg==0.29.0
+pgvector==0.2.5
+asyncpg==0.29.0
 numpy>=1.24.0,<2.0.0
 # JWT Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-# Redis caching (AMC-MVP-110)
-redis[hiredis]>=5.0.0
+python-multipart==0.0.6
+email-validator==2.1.0
+stripe==8.8.0
+# Redis for rate limiting (production)
+redis==5.0.8
+# Prometheus monitoring
+prometheus-client==0.21.0

@@ -1,6 +1,7 @@
 """Structured error handling system for AMC API."""
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uuid
@@ -14,19 +15,19 @@ class ErrorCode:
     AUTH_INVALID = "AUTH_INVALID"
     AUTH_EXPIRED = "AUTH_EXPIRED"
     AUTH_MISSING = "AUTH_MISSING"
-    
+
     # Validation errors (2xxx)
     VALIDATION_FAILED = "VALIDATION_FAILED"
     CONTENT_TOO_LARGE = "CONTENT_TOO_LARGE"
     INVALID_INPUT = "INVALID_INPUT"
-    
+
     # Resource errors (3xxx)
     NOT_FOUND = "NOT_FOUND"
     ALREADY_EXISTS = "ALREADY_EXISTS"
-    
+
     # Rate limiting (4xxx)
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
-    
+
     # Server errors (5xxx)
     INTERNAL_ERROR = "INTERNAL_ERROR"
     DATABASE_ERROR = "DATABASE_ERROR"
@@ -41,7 +42,7 @@ class ErrorResponse(BaseModel):
     request_id: str
     timestamp: str
     details: Optional[Dict[str, Any]] = None
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -60,7 +61,7 @@ class ErrorResponse(BaseModel):
 
 class AMCError(HTTPException):
     """Base exception for AMC API errors."""
-    
+
     def __init__(
         self,
         status_code: int,
@@ -82,7 +83,7 @@ class AMCError(HTTPException):
 
 class ValidationError(AMCError):
     """Validation error (400)."""
-    
+
     def __init__(
         self,
         message: str = "Validation failed",
@@ -98,7 +99,7 @@ class ValidationError(AMCError):
 
 class NotFoundError(AMCError):
     """Resource not found (404)."""
-    
+
     def __init__(
         self,
         resource: str,
@@ -115,7 +116,7 @@ class NotFoundError(AMCError):
 
 class ContentTooLargeError(AMCError):
     """Content exceeds size limit (413)."""
-    
+
     def __init__(
         self,
         content_size: int,
@@ -134,7 +135,7 @@ class ContentTooLargeError(AMCError):
 
 class RateLimitError(AMCError):
     """Rate limit exceeded (429)."""
-    
+
     def __init__(
         self,
         retry_after: int,
@@ -156,7 +157,7 @@ class RateLimitError(AMCError):
 
 class InternalError(AMCError):
     """Internal server error (500)."""
-    
+
     def __init__(
         self,
         message: str = "Internal server error",
@@ -172,7 +173,7 @@ class InternalError(AMCError):
 
 class DatabaseError(AMCError):
     """Database error (500)."""
-    
+
     def __init__(
         self,
         message: str = "Database operation failed",
@@ -188,10 +189,10 @@ class DatabaseError(AMCError):
 
 async def amc_error_handler(request: Request, exc: AMCError) -> JSONResponse:
     """Global exception handler for AMC errors."""
-    
+
     # Generate request ID if not present
     request_id = exc.request_id
-    
+
     # Build error response
     error_response = ErrorResponse(
         error=exc.__class__.__name__.replace("Error", ""),
@@ -201,16 +202,16 @@ async def amc_error_handler(request: Request, exc: AMCError) -> JSONResponse:
         timestamp=datetime.utcnow().isoformat() + "Z",
         details=exc.details
     )
-    
+
     # Log error with correlation ID
     print(f"[ERROR] Request ID: {request_id} | Code: {exc.code} | Message: {exc.message}")
     if exc.details:
         print(f"[ERROR] Details: {exc.details}")
-    
+
     # Prepare headers (including rate limit headers if available)
     headers = exc.headers or {}
     headers["X-Request-ID"] = request_id
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response.model_dump(exclude_none=True),
@@ -218,11 +219,39 @@ async def amc_error_handler(request: Request, exc: AMCError) -> JSONResponse:
     )
 
 
+async def request_validation_error_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """Return structured 422 payloads for FastAPI validation failures."""
+
+    request_id = get_request_id(request)
+    error_response = ErrorResponse(
+        error="ValidationError",
+        message="Request validation failed",
+        code=ErrorCode.VALIDATION_FAILED,
+        request_id=request_id,
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        details={"errors": exc.errors()},
+    )
+
+    print(
+        f"[ERROR] Request ID: {request_id} | Code: {ErrorCode.VALIDATION_FAILED} | "
+        f"Validation errors: {exc.errors()}"
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=error_response.model_dump(),
+        headers={"X-Request-ID": request_id},
+    )
+
+
 async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handler for unexpected exceptions."""
-    
+
     request_id = str(uuid.uuid4())
-    
+
     error_response = ErrorResponse(
         error="InternalError",
         message="An unexpected error occurred",
@@ -230,10 +259,10 @@ async def generic_error_handler(request: Request, exc: Exception) -> JSONRespons
         request_id=request_id,
         timestamp=datetime.utcnow().isoformat() + "Z"
     )
-    
+
     # Log full error for debugging
     print(f"[ERROR] Request ID: {request_id} | Unexpected error: {type(exc).__name__}: {str(exc)}")
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=error_response.model_dump(),
@@ -248,7 +277,7 @@ def get_request_id(request: Request) -> str:
 
 class RetryConfig:
     """Configuration for retry logic."""
-    
+
     def __init__(
         self,
         max_retries: int = 3,

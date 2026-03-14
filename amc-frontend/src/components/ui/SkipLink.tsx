@@ -9,9 +9,9 @@ interface SkipLinkProps {
  * Skip link component for accessibility - WCAG 2.4.1 Bypass Blocks
  * Allows keyboard and screen reader users to skip directly to main content
  */
-export default function SkipLink({ 
-  targetId, 
-  label = 'Skip to main content' 
+export default function SkipLink({
+  targetId,
+  label = 'Skip to main content'
 }: SkipLinkProps) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();

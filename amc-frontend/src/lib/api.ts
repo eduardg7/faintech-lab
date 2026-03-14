@@ -4,13 +4,32 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v
 
 export interface Memory {
   id: string;
+  workspace_id?: string;
   agent_id: string;
-  project_id: string;
+  task_id?: string | null;
+  project_id: string | null;
   type: 'outcome' | 'learning' | 'preference' | 'decision';
   content: string;
   tags: string[];
+  metadata?: Record<string, unknown>;
   importance: number;
   created_at: string;
+  updated_at?: string | null;
+}
+
+interface BackendMemory {
+  id: string;
+  workspace_id?: string;
+  agent_id: string;
+  task_id?: string | null;
+  project_id: string | null;
+  memory_type: 'outcome' | 'learning' | 'preference' | 'decision';
+  content: string;
+  tags: string[];
+  metadata?: Record<string, unknown>;
+  importance: number;
+  created_at: string;
+  updated_at?: string | null;
 }
 
 export interface MemoriesResponse {
@@ -29,9 +48,55 @@ export interface SearchResponse {
   total: number;
 }
 
+export interface CurrentUser {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  workspace_id: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  last_login_at?: string | null;
+}
+
+export interface ApiKeySummary {
+  id: string;
+  name: string;
+  key_preview: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+  expires_at?: string | null;
+}
+
+export interface ApiKeysResponse {
+  api_keys: ApiKeySummary[];
+  total: number;
+}
+
+const authHeaders = (token: string) => ({
+  Authorization: `Bearer ${token}`,
+});
+
+const mapMemory = (memory: BackendMemory): Memory => ({
+  id: memory.id,
+  workspace_id: memory.workspace_id,
+  agent_id: memory.agent_id,
+  task_id: memory.task_id,
+  project_id: memory.project_id,
+  type: memory.memory_type,
+  content: memory.content,
+  tags: memory.tags,
+  metadata: memory.metadata,
+  importance: memory.importance,
+  created_at: memory.created_at,
+  updated_at: memory.updated_at,
+});
+
 export const api = {
   async getMemories(
-    apiKey: string,
+    token: string,
     params?: {
       agent_id?: string;
       project_id?: string;
@@ -43,17 +108,32 @@ export const api = {
       offset?: number;
     }
   ): Promise<MemoriesResponse> {
+    const pageSize = params?.limit ?? 20;
+    const page = Math.floor((params?.offset ?? 0) / pageSize) + 1;
+
     const response = await axios.get(`${API_BASE_URL}/memories`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+      headers: authHeaders(token),
+      params: {
+        agent_id: params?.agent_id,
+        project_id: params?.project_id,
+        memory_type: params?.type,
+        tag: params?.tags,
+        page,
+        page_size: pageSize,
       },
-      params,
     });
-    return response.data;
+
+    return {
+      memories: response.data.memories.map(mapMemory),
+      total: response.data.total,
+      limit: response.data.page_size,
+      offset: (response.data.page - 1) * response.data.page_size,
+      has_more: response.data.has_next,
+    };
   },
 
   async searchMemories(
-    apiKey: string,
+    token: string,
     query: string,
     params?: {
       agent_id?: string;
@@ -61,14 +141,42 @@ export const api = {
       limit?: number;
     }
   ): Promise<SearchResponse> {
-    const response = await axios.get(`${API_BASE_URL}/memories/search`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+    const response = await axios.get(`${API_BASE_URL}/search/keyword`, {
+      headers: authHeaders(token),
       params: {
         q: query,
-        ...params,
+        agent_id: params?.agent_id,
+        page: 1,
+        page_size: params?.limit ?? 20,
       },
+    });
+
+    return {
+      results: response.data.results.map((result: BackendMemory & { relevance_score: number }) => ({
+        memory: mapMemory(result),
+        score: result.relevance_score,
+      })),
+      total: response.data.total,
+    };
+  },
+
+  async validateToken(token: string) {
+    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+      headers: authHeaders(token),
+    });
+    return response.data;
+  },
+
+  async getCurrentUser(token: string): Promise<CurrentUser> {
+    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+      headers: authHeaders(token),
+    });
+    return response.data;
+  },
+
+  async listApiKeys(token: string): Promise<ApiKeysResponse> {
+    const response = await axios.get(`${API_BASE_URL}/api-keys`, {
+      headers: authHeaders(token),
     });
     return response.data;
   },

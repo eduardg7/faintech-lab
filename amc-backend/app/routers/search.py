@@ -66,19 +66,19 @@ async def keyword_search(
 ):
     """
     Full-text keyword search using PostgreSQL GIN indexes.
-    
+
     - **q**: Search query (required, supports PostgreSQL full-text syntax on PG)
     - **agent_id**: Filter by agent ID
-    - **project_id**: Filter by project ID  
+    - **project_id**: Filter by project ID
     - **tags**: Comma-separated list of tags to filter
     - **page**: Page number (default: 1)
     - **page_size**: Items per page (default: 20, max: 100)
-    
+
     Performance target: <200ms for 1000 entries.
-    
+
     Note: On PostgreSQL, uses full-text search with GIN index.
     On SQLite, falls back to LIKE-based search.
-    
+
     Results are cached for 5 minutes to improve response times.
     """
     # Check cache first
@@ -91,24 +91,24 @@ async def keyword_search(
         page=page,
         page_size=page_size
     )
-    
+
     if cached_results:
         # Return cached results
         return SearchResponse(**cached_results)
-    
+
     start_time = time.perf_counter()
-    
+
     is_postgresql = await _detect_postgresql(db)
-    
+
     # Build filter conditions
     conditions = [Memory.deleted_at.is_(None)]
-    
+
     if agent_id:
         conditions.append(Memory.agent_id == agent_id)
-    
+
     if project_id:
         conditions.append(Memory.project_id == project_id)
-    
+
     # Tag filtering - check if any of the provided tags are in the memory's tags
     if tags:
         tag_list = [t.strip() for t in tags.split(",") if t.strip()]
@@ -117,7 +117,7 @@ async def keyword_search(
                 Memory.tags.contains(f'"{tag}"') for tag in tag_list
             ]
             conditions.append(or_(*tag_conditions))
-    
+
     # Build search query based on database type
     if is_postgresql:
         # PostgreSQL: Use full-text search with tsvector
@@ -127,39 +127,39 @@ async def keyword_search(
         ).where(
             and_(*conditions, text("content_tsvector @@ plainto_tsquery('english', :query)"))
         ).params(query=q)
-        
+
         # Order by relevance
         query = query.order_by(text("rank DESC"))
     else:
         # SQLite: Fall back to LIKE search
         search_term = f"%{q}%"
         conditions.append(Memory.content.ilike(search_term))
-        
+
         query = select(Memory).where(and_(*conditions))
-        
+
         # Order by creation date for SQLite
         query = query.order_by(Memory.created_at.desc())
-    
+
     # Get total count
     count_query = select(func.count(Memory.id)).where(and_(*conditions))
     if not is_postgresql:
         # Add content filter for count in SQLite
         search_term = f"%{q}%"
         count_query = count_query.where(Memory.content.ilike(search_term))
-    
+
     count_result = await db.execute(count_query)
     total = count_result.scalar() or 0
-    
+
     # Apply pagination
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
-    
+
     result = await db.execute(query)
     rows = result.all()
-    
+
     # Calculate query time
     query_time_ms = (time.perf_counter() - start_time) * 1000
-    
+
     # Convert to response format
     search_results = []
     for row in rows:
@@ -172,7 +172,7 @@ async def keyword_search(
             memory = row[0] if hasattr(row, '__getitem__') else row
             # For SQLite, use simple relevance based on match presence
             relevance_score = 0.5 if q.lower() in memory.content.lower() else 0.0
-        
+
         search_results.append(SearchResult(
             id=memory.id,
             workspace_id=memory.workspace_id,
@@ -185,10 +185,10 @@ async def keyword_search(
             created_at=memory.created_at,
             updated_at=memory.updated_at
         ))
-    
+
     # Calculate has_next
     has_next = (offset + page_size) < total
-    
+
     response = SearchResponse(
         results=search_results,
         total=total,
@@ -197,7 +197,7 @@ async def keyword_search(
         has_next=has_next,
         query_time_ms=round(query_time_ms, 2)
     )
-    
+
     # Cache results for future requests
     await cache.set_search_results(
         query=q,
@@ -208,7 +208,7 @@ async def keyword_search(
         page_size=page_size,
         results=response.model_dump()
     )
-    
+
     return response
 
 
@@ -224,15 +224,15 @@ async def search_suggestions(
 ):
     """
     Get search suggestions based on prefix.
-    
+
     Returns distinct words from memory content that start with the prefix.
     """
     is_postgresql = await _detect_postgresql(db)
-    
+
     if is_postgresql:
         # PostgreSQL: Use ts_stat for word extraction
         query = text("""
-            SELECT DISTINCT word 
+            SELECT DISTINCT word
             FROM ts_stat($$
                 SELECT to_tsvector('english', content)
                 FROM memories
@@ -256,11 +256,11 @@ async def search_suggestions(
             ORDER BY word
             LIMIT :limit
         """)
-    
+
     result = await db.execute(
         query,
         {"like_pattern": f"{prefix}%", "limit": limit}
     )
-    
+
     suggestions = [row[0] for row in result.all()]
     return suggestions

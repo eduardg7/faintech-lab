@@ -62,11 +62,7 @@ export const options = {
 };
 
 export default function () {
-  const auth = registerAndLogin(__VU);
-  if (!auth.ok) {
-    errorRate.add(1);
-    return;
-  }
+  const agentId = `rate-test-agent-${__VU}`;
 
   const payload = JSON.stringify({
     agent_id: `rate-test-agent-${__VU}`,
@@ -76,7 +72,15 @@ export default function () {
     tags: ['rate-test'],
   });
 
-  const res = http.post(`${API_PREFIX}/memories`, payload, { headers: authHeaders(auth.token) });
+  const params = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const res = http.post(`${BASE_URL}/api/v1/memories/`, payload, params);
+
+  // Check for rate limiting (429 status)
   const isRateLimited = res.status === 429;
   const isSuccess = res.status === 201 || res.status === 200;
 

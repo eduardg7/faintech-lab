@@ -57,168 +57,276 @@ export interface ProjectBreakdownResponse {
   total: number;
 }
 
+interface RawMemory {
+  id: string;
+  workspace_id: string;
+  agent_id: string;
+  task_id: string | null;
+  project_id: string | null;
+  memory_type: 'outcome' | 'learning' | 'preference' | 'decision';
+  importance: number;
+  created_at: string;
+  tags: string[];
+  content: string;
+  metadata: Record<string, unknown>;
+  updated_at: string | null;
+}
+
+async function fetchAllMemories(token: string): Promise<RawMemory[]> {
+  const pageSize = 100;
+  let page = 1;
+  let hasNext = true;
+  const memories: RawMemory[] = [];
+
+  while (hasNext) {
+    const response = await axios.get(`${API_BASE_URL}/memories`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { page, page_size: pageSize },
+    });
+
+    memories.push(...((response.data.memories || []) as RawMemory[]));
+    hasNext = Boolean(response.data.has_next);
+    page += 1;
+  }
+
+  return memories;
+}
+
 export const statsApi = {
-  async getMemoryStats(apiKey: string): Promise<MemoryStats> {
-    const response = await axios.get(`${API_BASE_URL}/stats/memories`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-    return response.data;
+  async getMemoryStats(token: string): Promise<MemoryStats> {
+    const memories = await fetchAllMemories(token);
+
+    const byType = { outcome: 0, learning: 0, preference: 0, decision: 0 };
+    const byProjectMap: Record<string, number> = {};
+    let importanceSum = 0;
+
+    for (const memory of memories) {
+      byType[memory.memory_type] += 1;
+      if (memory.project_id) {
+        byProjectMap[memory.project_id] = (byProjectMap[memory.project_id] || 0) + 1;
+      }
+      importanceSum += memory.importance || 0;
+    }
+
+    const total = memories.length;
+
+    return {
+      total_memories: total,
+      by_type: byType,
+      by_project: Object.entries(byProjectMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([project_id, count]) => ({
+          project_id,
+          count,
+          percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+        })),
+      storage_used_mb: Math.round(total * 0.002 * 100) / 100,
+      avg_importance: total > 0 ? Math.round((importanceSum / total) * 100) / 100 : 0,
+    };
   },
 
-  async getAgentActivity(
-    apiKey: string,
-    params?: { days?: number; limit?: number }
-  ): Promise<AgentActivityResponse> {
-    const response = await axios.get(`${API_BASE_URL}/stats/agents`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      params: {
-        days: params?.days || 7,
-        limit: params?.limit || 10,
-      },
+  async getAgentActivity(token: string, params?: { days?: number; limit?: number }): Promise<AgentActivityResponse> {
+    const days = params?.days || 7;
+    const limit = params?.limit || 10;
+    const memories = await fetchAllMemories(token);
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const recent = memories.filter((memory) => new Date(memory.created_at) >= cutoff);
+    const byAgent: Record<string, { count: number; last: string; byDate: Record<string, number> }> = {};
+
+    for (const memory of recent) {
+      if (!byAgent[memory.agent_id]) {
+        byAgent[memory.agent_id] = { count: 0, last: memory.created_at, byDate: {} };
+      }
+
+      byAgent[memory.agent_id].count += 1;
+      if (memory.created_at > byAgent[memory.agent_id].last) {
+        byAgent[memory.agent_id].last = memory.created_at;
+      }
+
+      const date = memory.created_at.split('T')[0];
+      byAgent[memory.agent_id].byDate[date] = (byAgent[memory.agent_id].byDate[date] || 0) + 1;
+    }
+
+    const dates = Array.from({ length: days }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (days - index - 1));
+      return date.toISOString().split('T')[0];
     });
-    return response.data;
+
+    const agents = Object.entries(byAgent)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, limit)
+      .map(([agent_id, data]) => ({
+        agent_id,
+        memory_count: data.count,
+        last_activity: data.last,
+        activity_timeline: dates.map((date) => ({
+          date,
+          count: data.byDate[date] || 0,
+        })),
+      }));
+
+    return {
+      agents,
+      total: agents.length,
+      period_days: days,
+    };
   },
 
-  async getProjectBreakdown(
-    apiKey: string,
-    params?: { limit?: number }
-  ): Promise<ProjectBreakdownResponse> {
-    const response = await axios.get(`${API_BASE_URL}/stats/projects`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      params: {
-        limit: params?.limit || 10,
-      },
-    });
-    return response.data;
+  async getProjectBreakdown(token: string, params?: { limit?: number }): Promise<ProjectBreakdownResponse> {
+    const limit = params?.limit || 10;
+    const memories = await fetchAllMemories(token);
+    const byProject: Record<string, { byType: Record<string, number>; byAgent: Record<string, number> }> = {};
+
+    for (const memory of memories) {
+      if (!memory.project_id) {
+        continue;
+      }
+
+      if (!byProject[memory.project_id]) {
+        byProject[memory.project_id] = { byType: {}, byAgent: {} };
+      }
+
+      byProject[memory.project_id].byType[memory.memory_type] =
+        (byProject[memory.project_id].byType[memory.memory_type] || 0) + 1;
+      byProject[memory.project_id].byAgent[memory.agent_id] =
+        (byProject[memory.project_id].byAgent[memory.agent_id] || 0) + 1;
+    }
+
+    const projects = Object.entries(byProject)
+      .sort((a, b) => {
+        const totalA = Object.values(a[1].byType).reduce((sum, value) => sum + value, 0);
+        const totalB = Object.values(b[1].byType).reduce((sum, value) => sum + value, 0);
+        return totalB - totalA;
+      })
+      .slice(0, limit)
+      .map(([project_id, data]) => ({
+        project_id,
+        project_name: project_id,
+        total_memories: Object.values(data.byType).reduce((sum, value) => sum + value, 0),
+        by_type: {
+          outcome: data.byType.outcome || 0,
+          learning: data.byType.learning || 0,
+          preference: data.byType.preference || 0,
+          decision: data.byType.decision || 0,
+        },
+        top_agents: Object.entries(data.byAgent)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([agent_id, count]) => ({ agent_id, count })),
+        growth_rate: 0,
+      }));
+
+    return {
+      projects,
+      total: projects.length,
+    };
   },
 };
 
-// Mock data for development when API is not available
 export const mockMemoryStats: MemoryStats = {
-  total_memories: 1247,
-  by_type: {
-    outcome: 423,
-    learning: 398,
-    preference: 256,
-    decision: 170,
-  },
-  by_project: [
-    { project_id: 'faintech-os', count: 512, percentage: 41.1 },
-    { project_id: 'faintech-lab', count: 389, percentage: 31.2 },
-    { project_id: 'faintrading', count: 212, percentage: 17.0 },
-    { project_id: 'amc-mvp', count: 134, percentage: 10.7 },
-  ],
-  storage_used_mb: 24.8,
-  avg_importance: 0.72,
+  total_memories: 0,
+  by_type: { outcome: 0, learning: 0, preference: 0, decision: 0 },
+  by_project: [],
+  storage_used_mb: 0,
+  avg_importance: 0,
 };
 
 export const mockAgentActivity: AgentActivityResponse = {
-  agents: [
-    {
-      agent_id: 'faintech-ceo',
-      memory_count: 187,
-      last_activity: '2026-03-10T22:15:00Z',
-      activity_timeline: [
-        { date: '2026-03-04', count: 12 },
-        { date: '2026-03-05', count: 18 },
-        { date: '2026-03-06', count: 24 },
-        { date: '2026-03-07', count: 31 },
-        { date: '2026-03-08', count: 28 },
-        { date: '2026-03-09', count: 42 },
-        { date: '2026-03-10', count: 32 },
-      ],
-    },
-    {
-      agent_id: 'faintech-cto',
-      memory_count: 156,
-      last_activity: '2026-03-10T22:20:00Z',
-      activity_timeline: [
-        { date: '2026-03-04', count: 8 },
-        { date: '2026-03-05', count: 15 },
-        { date: '2026-03-06', count: 22 },
-        { date: '2026-03-07', count: 28 },
-        { date: '2026-03-08', count: 31 },
-        { date: '2026-03-09', count: 29 },
-        { date: '2026-03-10', count: 23 },
-      ],
-    },
-    {
-      agent_id: 'faintech-frontend',
-      memory_count: 98,
-      last_activity: '2026-03-10T22:25:00Z',
-      activity_timeline: [
-        { date: '2026-03-04', count: 5 },
-        { date: '2026-03-05', count: 9 },
-        { date: '2026-03-06', count: 14 },
-        { date: '2026-03-07', count: 18 },
-        { date: '2026-03-08', count: 21 },
-        { date: '2026-03-09', count: 17 },
-        { date: '2026-03-10', count: 14 },
-      ],
-    },
-    {
-      agent_id: 'faintech-backend',
-      memory_count: 142,
-      last_activity: '2026-03-10T22:10:00Z',
-      activity_timeline: [
-        { date: '2026-03-04', count: 11 },
-        { date: '2026-03-05', count: 16 },
-        { date: '2026-03-06', count: 23 },
-        { date: '2026-03-07', count: 26 },
-        { date: '2026-03-08', count: 28 },
-        { date: '2026-03-09', count: 22 },
-        { date: '2026-03-10', count: 16 },
-      ],
-    },
-  ],
-  total: 4,
+  agents: [],
+  total: 0,
   period_days: 7,
 };
 
 export const mockProjectBreakdown: ProjectBreakdownResponse = {
-  projects: [
-    {
-      project_id: 'faintech-os',
-      project_name: 'Faintech OS',
-      total_memories: 512,
-      by_type: { outcome: 178, learning: 156, preference: 98, decision: 80 },
-      top_agents: [
-        { agent_id: 'faintech-ceo', count: 89 },
-        { agent_id: 'faintech-cto', count: 67 },
-        { agent_id: 'faintech-coo', count: 54 },
-      ],
-      growth_rate: 12.5,
-    },
-    {
-      project_id: 'faintech-lab',
-      project_name: 'Faintech Labs',
-      total_memories: 389,
-      by_type: { outcome: 134, learning: 118, preference: 78, decision: 59 },
-      top_agents: [
-        { agent_id: 'faintech-cto', count: 72 },
-        { agent_id: 'faintech-backend', count: 58 },
-        { agent_id: 'faintech-frontend', count: 45 },
-      ],
-      growth_rate: 18.2,
-    },
-    {
-      project_id: 'faintrading',
-      project_name: 'FainTrading',
-      total_memories: 212,
-      by_type: { outcome: 72, learning: 68, preference: 42, decision: 30 },
-      top_agents: [
-        { agent_id: 'faintech-ceo', count: 45 },
-        { agent_id: 'faintech-cto', count: 38 },
-        { agent_id: 'faintech-backend', count: 32 },
-      ],
-      growth_rate: 8.7,
-    },
-  ],
-  total: 3,
+  projects: [],
+  total: 0,
+};
+
+// Per-agent dashboard stats
+export interface AgentDashboardStats {
+  agent_id: string;
+  total_memories: number;
+  memories_this_week: number;
+  pattern_count: number;
+  storage_used_mb: number;
+  by_type: {
+    outcome: number;
+    learning: number;
+    preference: number;
+    decision: number;
+  };
+  recent_activity: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+export const statsApi = {
+  ...statsApi,
+
+  async getAgentDashboardStats(token: string, agentId: string): Promise<AgentDashboardStats> {
+    const memories = await fetchAllMemories(token);
+
+    // Filter memories for this specific agent
+    const agentMemories = memories.filter((m) => m.agent_id === agentId);
+    const total = agentMemories.length;
+
+    // Calculate memories this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const memoriesThisWeek = agentMemories.filter(
+      (m) => new Date(m.created_at) >= oneWeekAgo
+    ).length;
+
+    // Calculate by type
+    const byType = { outcome: 0, learning: 0, preference: 0, decision: 0 };
+    for (const memory of agentMemories) {
+      byType[memory.memory_type] += 1;
+    }
+
+    // Calculate pattern count (unique tag combinations)
+    const tagPatterns = new Set<string>();
+    for (const memory of agentMemories) {
+      if (memory.tags && memory.tags.length > 0) {
+        tagPatterns.add(memory.tags.sort().join(','));
+      }
+    }
+    const patternCount = tagPatterns.size;
+
+    // Calculate recent activity (last 7 days)
+    const activityMap: Record<string, number> = {};
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      return date.toISOString().split('T')[0];
+    });
+
+    for (const date of dates) {
+      activityMap[date] = 0;
+    }
+
+    for (const memory of agentMemories) {
+      const date = memory.created_at.split('T')[0];
+      if (activityMap[date] !== undefined) {
+        activityMap[date] += 1;
+      }
+    }
+
+    return {
+      agent_id: agentId,
+      total_memories: total,
+      memories_this_week: memoriesThisWeek,
+      pattern_count: patternCount,
+      storage_used_mb: Math.round(total * 0.002 * 100) / 100,
+      by_type: byType,
+      recent_activity: dates.map((date) => ({
+        date,
+        count: activityMap[date] || 0,
+      })),
+    };
+  },
 };
