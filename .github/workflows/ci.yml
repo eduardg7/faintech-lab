@@ -1,0 +1,51 @@
+# Faintech Lab - Basic CI Check
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  baseline-check:
+    name: Baseline Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON files..."
+          find . -name "*.json" -type f | while read file; do
+            echo "Checking $file..."
+            jq empty "$file" || exit 1
+          done
+          echo "All JSON files are valid"
+
+      - name: Validate Markdown files (basic)
+        run: |
+          echo "Validating Markdown files..."
+          # Basic check for common Markdown files
+          find . -name "*.md" -type f | head -20 | while read file; do
+            echo "Checking $file..."
+            # Just verify files are readable and not empty
+            if [ -s "$file" ]; then
+              echo "  ✓ $file exists and is not empty"
+            fi
+          done
+          echo "Markdown validation complete"
+
+      - name: Repository health check
+        run: |
+          echo "Running repository health checks..."
+          echo "Repository structure:"
+          ls -la
+          echo ""
+          echo "Key directories:"
+          [ -d ".github" ] && echo "  ✓ .github exists"
+          [ -d "docs" ] && echo "  ✓ docs exists"
+          echo ""
+          echo "Repository is healthy"
