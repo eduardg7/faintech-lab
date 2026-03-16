@@ -13,17 +13,17 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(.venv|venv|\.venv310|node_modules)/
+        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
       - id: end-of-file-fixer
-        exclude: ^(.venv|venv|\.venv310|node_modules)/
+        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
       - id: check-yaml
       - id: check-json
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ['--maxkb=500']
-        exclude: ^(.venv|venv|\.venv310|node_modules)/
+        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
       - id: detect-private-key
-        exclude: ^(.venv|venv|\.venv310|node_modules)/
+        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
 
   - repo: local
     hooks:
