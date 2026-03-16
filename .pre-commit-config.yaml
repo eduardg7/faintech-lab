@@ -23,7 +23,8 @@ repos:
         args: ['--maxkb=500']
         exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
       - id: detect-private-key
-        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/
+        # Exclude venv dirs and test fixtures (intentional test patterns)
+        exclude: (^|/)(\.venv|venv|\.venv310|node_modules)/|test_secrets\.py$
 
   - repo: local
     hooks:
