@@ -29,6 +29,16 @@ Direction TBD by CPO. Starting point: identify a problem the meta-ai infrastruct
 - Every merged PR updates the relevant `docs/` file
 - Experiments that fail get documented in `docs/experiments/`
 
+## Publications
+
+### Rigorous R&D Series
+- [Rigorous R&D: How Faintech Lab Approaches AI Experiments](docs/content/articles/rigorous-rd-faintech-lab-approach.md) — Published 2026-03-16
+  - LAB-003: 95% same-agent memory recall, 41.7% cross-agent handoff
+  - LAB-004: Self-improvement loop with 2/2 automatic corrections
+  - LAB-005: 100% inter-agent messaging delivery
+
+All experiments include quantitative results, transparent failures, and actionable findings.
+
 ## Agent workspace
 
 - TASK_DB: `/Users/eduardgridan/faintech-os/data/ops/TASK_DB.json`
