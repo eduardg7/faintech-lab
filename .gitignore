@@ -31,3 +31,15 @@ node_modules/
 *.log
 npm-debug.log*
 .npm
+
+# Test coverage
+coverage/
+*.lcov
+
+# TypeScript
+dist/
+*.tsbuildinfo
+
+# Test artifacts
+.vitest/
+.nyc_output/

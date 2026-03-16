@@ -1,0 +1,15 @@
+{
+  "validationRules": {
+    "requiredFields": [
+      "workflowId",
+      "timestamp",
+      "steps"
+    ],
+    "stepCount": 3,
+    "outputFormat": "json"
+  },
+  "processing": {
+    "normalizeTimestamps": true,
+    "validateStepIds": true
+  }
+}

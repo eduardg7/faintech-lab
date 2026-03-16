@@ -1,0 +1,35 @@
+{
+  "name": "faintech-lab",
+  "version": "1.0.0",
+  "description": "Faintech Lab - Research and experimentation environment",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run tests/",
+    "test:watch": "vitest tests/",
+    "test:coverage": "vitest run --coverage tests/",
+    "typecheck": "tsc --noEmit src/lib/*.ts",
+    "lint": "eslint src/lib tests --ext .ts"
+  },
+  "keywords": [
+    "faintech",
+    "lab",
+    "research",
+    "ai",
+    "experiments"
+  ],
+  "author": "Faintech Solutions <support@faintech.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eduardg7/faintech-lab"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

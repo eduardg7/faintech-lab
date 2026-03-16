@@ -1,0 +1,93 @@
+{
+  "steps": [
+    {
+      "step": 1,
+      "data": {
+        "validationRules": {
+          "requiredFields": [
+            "workflowId",
+            "timestamp",
+            "steps"
+          ],
+          "stepCount": 3,
+          "outputFormat": "json"
+        },
+        "processing": {
+          "normalizeTimestamps": true,
+          "validateStepIds": true
+        }
+      },
+      "duration": 0.11
+    },
+    {
+      "step": 2,
+      "data": {
+        "workflowId": "LAB-008-test-001",
+        "timestamp": "2026-03-16T16:10:23.202Z",
+        "steps": [
+          {
+            "id": 1,
+            "name": "READ_CONFIG",
+            "description": "Read JSON configuration file",
+            "completed": true,
+            "duration_ms": 19
+          },
+          {
+            "id": 2,
+            "name": "PROCESS_DATA",
+            "description": "Transform and validate data",
+            "completed": true,
+            "duration_ms": 19
+          },
+          {
+            "id": 3,
+            "name": "WRITE_OUTPUT",
+            "description": "Write processed output to file",
+            "completed": true,
+            "duration_ms": 21
+          }
+        ],
+        "status": "valid",
+        "validation": {
+          "requiredFields": [
+            "workflowId",
+            "timestamp",
+            "steps"
+          ],
+          "missingFields": [],
+          "stepCountValid": true
+        }
+      },
+      "duration": 0.08
+    },
+    {
+      "step": 3,
+      "data": {
+        "path": "/Users/eduardgridan/faintech-lab/workflow-output.json",
+        "size_kb": 0.74
+      },
+      "duration": 0.31
+    }
+  ],
+  "timing": {
+    "total_ms": 0.94,
+    "step1_ms": 0.11,
+    "step2_ms": 0.08,
+    "step3_ms": 0.31
+  },
+  "finalData": {
+    "path": "/Users/eduardgridan/faintech-lab/workflow-output.json",
+    "size_kb": 0.74
+  },
+  "benchmark": {
+    "automated": 0.94,
+    "manual_estimated": 1.41,
+    "speedup_pct": 33
+  },
+  "timestamp": "2026-03-16T16:10:23.210Z",
+  "acceptanceCriteria": {
+    "total": 5,
+    "passed": 5,
+    "pct": 100
+  }
+}

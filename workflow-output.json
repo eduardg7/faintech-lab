@@ -1,0 +1,37 @@
+{
+  "workflowId": "LAB-008-test-001",
+  "timestamp": "2026-03-16T16:10:23.202Z",
+  "steps": [
+    {
+      "id": 1,
+      "name": "READ_CONFIG",
+      "description": "Read JSON configuration file",
+      "completed": true,
+      "duration_ms": 19
+    },
+    {
+      "id": 2,
+      "name": "PROCESS_DATA",
+      "description": "Transform and validate data",
+      "completed": true,
+      "duration_ms": 19
+    },
+    {
+      "id": 3,
+      "name": "WRITE_OUTPUT",
+      "description": "Write processed output to file",
+      "completed": true,
+      "duration_ms": 21
+    }
+  ],
+  "status": "valid",
+  "validation": {
+    "requiredFields": [
+      "workflowId",
+      "timestamp",
+      "steps"
+    ],
+    "missingFields": [],
+    "stepCountValid": true
+  }
+}
