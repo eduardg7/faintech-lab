@@ -39,7 +39,7 @@ We test whether we can identify a product-market fit for non-technical teams tha
 ## Success Criteria
 
 ### Sprint 1 Success (meta-ai)
-- [ ] At least one agent demonstrates persistent memory across 3+ sessions
+- [x] At least one agent demonstrates persistent memory across 3+ sessions (LAB-003: VALIDATED - 95% short-term, 100% long-term with same-agent)
 - [ ] Self-improvement loop produces at least 2 verified behavior changes
 - [ ] Inter-agent messaging achieves 100% delivery rate in tests
 - [ ] Observability dashboard shows real-time agent status for all active agents
@@ -53,12 +53,34 @@ We test whether we can identify a product-market fit for non-technical teams tha
 
 ## Experiments (Sprint 1)
 
-### LAB-003: Persistent Agent Memory Validation
+### LAB-003: Persistent Agent Memory Validation ✅ VALIDATED (DONE)
 **Hypothesis:** File-based structured memory (MEMORY.md + daily notes) enables agents to maintain context across sessions with >80% accuracy on follow-up questions.
 
 **Test:** Ask the same agent questions across 3 sessions about information shared in session 1. Measure recall accuracy.
 
 **Success:** ≥80% recall on factual information, ≥60% on contextual nuance.
+
+**Results (2026-03-16):**
+- Session 1 (2026-03-15 19:15): 13 items injected into pm agent memory
+- Session 2 (2026-03-15 21:45): 95% accuracy (Factual 100%, Contextual 90%) ✅
+- Session 3 Original (2026-03-16 00:02): 41.7% accuracy - cross-agent handoff confound ⚠️
+- Session 3 Same-Agent (LAB-003b, 2026-03-16 05:38): 100% accuracy ✅
+
+**Conclusion:** VALIDATED ✅
+- Short-term memory (2.5h, same agent): Excellent (95%)
+- Long-term memory (10.4h, same agent): Excellent (100%)
+- Cross-agent memory: Failed - memory_search is agent-scoped, not globally accessible
+- Hypothesis confirmed: File-based structured memory works correctly for same-agent cross-session retention
+
+**Key Finding:** The cross-agent handoff failure was NOT a memory retention problem. It was an architectural limitation: memory_search only searches the requesting agent's memory files, not other agents' files.
+
+**Artifacts:**
+- `/Users/eduardgridan/faintech-lab/docs/research/LAB-003-session3-results.md` (original Session 3)
+- `/Users/eduardgridan/faintech-lab/docs/research/LAB-003b-results.md` (same-agent Session 3)
+- `/Users/eduardgridan/faintech-lab/docs/research/INSIGHT-lab003-partial-validation.md` (research assessment)
+
+**Research completed**: 2026-03-16T04:44:00Z by research agent
+**LAB-003b completed**: 2026-03-16T05:40:00Z by pm agent
 
 ### LAB-004: Self-Improvement Loop Effectiveness
 **Hypothesis:** Agents can update their own behavior (AGENTS.md, SOUL.md) based on logged learnings without human intervention.
