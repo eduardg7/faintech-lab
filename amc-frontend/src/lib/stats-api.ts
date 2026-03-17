@@ -125,6 +125,24 @@ export interface ProjectBreakdownResponse {
   total: number;
 }
 
+export interface AgentDashboardStats {
+  agent_id: string;
+  total_memories: number;
+  memories_this_week: number;
+  pattern_count: number;
+  storage_used_mb: number;
+  by_type: {
+    outcome: number;
+    learning: number;
+    preference: number;
+    decision: number;
+  };
+  recent_activity: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
 interface RawMemory {
   id: string;
   workspace_id: string;
@@ -292,48 +310,6 @@ export const statsApi = {
       total: projects.length,
     };
   },
-};
-
-export const mockMemoryStats: MemoryStats = {
-  total_memories: 0,
-  by_type: { outcome: 0, learning: 0, preference: 0, decision: 0 },
-  by_project: [],
-  storage_used_mb: 0,
-  avg_importance: 0,
-};
-
-export const mockAgentActivity: AgentActivityResponse = {
-  agents: [],
-  total: 0,
-  period_days: 7,
-};
-
-export const mockProjectBreakdown: ProjectBreakdownResponse = {
-  projects: [],
-  total: 0,
-};
-
-// Per-agent dashboard stats
-export interface AgentDashboardStats {
-  agent_id: string;
-  total_memories: number;
-  memories_this_week: number;
-  pattern_count: number;
-  storage_used_mb: number;
-  by_type: {
-    outcome: number;
-    learning: number;
-    preference: number;
-    decision: number;
-  };
-  recent_activity: Array<{
-    date: string;
-    count: number;
-  }>;
-}
-
-export const statsApi = {
-  ...statsApi,
 
   async getAgentDashboardStats(token: string, agentId: string): Promise<AgentDashboardStats> {
     const memories = await fetchAllMemories(token);
@@ -396,4 +372,23 @@ export const statsApi = {
       })),
     };
   },
+};
+
+export const mockMemoryStats: MemoryStats = {
+  total_memories: 0,
+  by_type: { outcome: 0, learning: 0, preference: 0, decision: 0 },
+  by_project: [],
+  storage_used_mb: 0,
+  avg_importance: 0,
+};
+
+export const mockAgentActivity: AgentActivityResponse = {
+  agents: [],
+  total: 0,
+  period_days: 7,
+};
+
+export const mockProjectBreakdown: ProjectBreakdownResponse = {
+  projects: [],
+  total: 0,
 };
