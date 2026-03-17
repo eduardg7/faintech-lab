@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # "postgres" → Vector(1536) embedding column (production, requires pgvector)
     database_type: str = "sqlite"
 
+    # Connection pool settings (TD-017: fix pool exhaustion for beta)
+    # These are critical for handling concurrent load without connection exhaustion
+    db_pool_size: int = 20  # Number of connections to keep in pool
+    db_max_overflow: int = 10  # Additional connections beyond pool_size
+    db_pool_timeout: int = 30  # Seconds to wait for a connection before error
+    db_pool_recycle: int = 1800  # Recycle connections after 30 minutes (prevents stale connections)
+    db_pool_pre_ping: bool = True  # Test connection health before use
+
     # API
     api_v1_prefix: str = "/v1"
 

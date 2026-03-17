@@ -5,15 +5,51 @@ from sqlalchemy import event
 from typing import AsyncGenerator
 import uuid
 from datetime import datetime
+import logging
 
 from config import settings
 
+logger = logging.getLogger(__name__)
 
-# Create async engine
+
+def _get_pool_kwargs():
+    """Build pool configuration based on database type.
+
+    TD-017: SQLite has fundamental write serialization limits.
+    For production load, PostgreSQL with proper pool sizing is required.
+    """
+    # SQLite with aiosqlite doesn't support traditional connection pooling
+    # It uses a single file handle, so pool settings are mostly ignored
+    if "sqlite" in str(settings.database_url).lower():
+        logger.info(
+            "SQLite detected - using limited pool config. "
+            "For production load, switch to PostgreSQL."
+        )
+        # SQLite: Use minimal pool to avoid file handle contention
+        return {
+            "pool_size": 5,
+            "max_overflow": 0,  # SQLite doesn't benefit from overflow
+            "pool_timeout": settings.db_pool_timeout,
+            "pool_recycle": None,  # SQLite doesn't need recycle
+            "pool_pre_ping": False,  # SQLite doesn't support pre-ping
+        }
+
+    # PostgreSQL: Use full pool configuration
+    return {
+        "pool_size": settings.db_pool_size,
+        "max_overflow": settings.db_max_overflow,
+        "pool_timeout": settings.db_pool_timeout,
+        "pool_recycle": settings.db_pool_recycle,
+        "pool_pre_ping": settings.db_pool_pre_ping,
+    }
+
+
+# Create async engine with proper pool configuration
 engine = create_async_engine(
     settings.database_url,
     echo=settings.database_echo,
     future=True,
+    **_get_pool_kwargs()
 )
 
 # Create async session factory
