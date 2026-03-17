@@ -61,18 +61,19 @@ Dashboard returns 401 errors on all API requests after login.
 ## Acceptance Criteria Verification
 
 - [x] Diagnose root cause: Token expiration without refresh
-- [ ] Fix token storage: Store both access and refresh tokens
-- [ ] Fix token refresh: Implement automatic refresh on 401
-- [ ] Verify auth middleware: Backend expects correct Bearer format (confirmed)
+- [x] Fix token storage: Store both access and refresh tokens in localStorage
+- [x] Fix token refresh: Implement automatic refresh on 401 via axios interceptors
+- [x] Fix AuthContext: Update to use setAuth(accessToken, refreshToken)
+- [x] Add backward compatibility: setApiKey method for beta LoginForm
 - [ ] Test all endpoints: Verify dashboard works with refreshed tokens
 - [ ] Manual verification: Login, wait for token expiry, verify auto-refresh works
 
 ## Files to Modify
 
-1. `amc-frontend/src/contexts/AuthContext.tsx` - Add refresh logic
-2. `amc-frontend/src/lib/api.ts` - Add axios interceptor
-3. `amc-frontend/src/components/LoginForm.tsx` - Store both tokens
-4. `amc-frontend/src/lib/stats-api.ts` - Use shared axios instance
+1. `amc-frontend/src/contexts/AuthContext.tsx` - ✅ Add refresh logic + backward compatibility
+2. `amc-frontend/src/lib/api.ts` - ✅ Add axios interceptor
+3. `amc-frontend/src/components/LoginForm.tsx` - ⚠️ Uses setApiKey (backward compatible)
+4. `amc-frontend/src/lib/stats-api.ts` - ✅ Use shared axios instance
 
 ## Next Steps
 
