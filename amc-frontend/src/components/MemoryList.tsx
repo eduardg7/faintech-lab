@@ -11,7 +11,7 @@ import DashboardStats from './ui/DashboardStats';
 import OnboardingShell from './dashboard/OnboardingShell';
 
 export default function MemoryList() {
-  const { apiKey, logout } = useAuth();
+  const { accessToken, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
@@ -34,35 +34,35 @@ export default function MemoryList() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['memories', selectedType, selectedAgent],
     queryFn: () =>
-      api.getMemories(apiKey!, {
+      api.getMemories(accessToken!, {
         type: selectedType || undefined,
         agent_id: selectedAgent || undefined,
         limit: 50,
       }),
-    enabled: !!apiKey,
+    enabled: !!accessToken,
   });
 
   // Search memories
   const { data: searchData, refetch: refetchSearch } = useQuery({
     queryKey: ['search', searchQuery],
     queryFn: () =>
-      api.searchMemories(apiKey!, searchQuery, {
+      api.searchMemories(accessToken!, searchQuery, {
         type: selectedType || undefined,
         agent_id: selectedAgent || undefined,
       }),
-    enabled: !!apiKey && searchQuery.length > 0,
+    enabled: !!accessToken && searchQuery.length > 0,
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
-    queryFn: () => api.getCurrentUser(apiKey!),
-    enabled: !!apiKey,
+    queryFn: () => api.getCurrentUser(accessToken!),
+    enabled: !!accessToken,
   });
 
   const { data: apiKeysData } = useQuery({
     queryKey: ['api-keys'],
-    queryFn: () => api.listApiKeys(apiKey!),
-    enabled: !!apiKey,
+    queryFn: () => api.listApiKeys(accessToken!),
+    enabled: !!accessToken,
   });
 
   const handleSearch = (e: React.FormEvent) => {

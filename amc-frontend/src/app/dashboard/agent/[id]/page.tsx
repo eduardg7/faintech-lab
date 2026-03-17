@@ -15,7 +15,7 @@ interface PageProps {
 }
 
 export default function AgentDashboardPage({ params }: PageProps) {
-  const { apiKey, logout, isAuthenticated } = useAuth();
+  const { accessToken, logout, isAuthenticated } = useAuth();
   const router = useRouter();
   const agentId = params.id;
 
@@ -34,9 +34,9 @@ export default function AgentDashboardPage({ params }: PageProps) {
   } = useQuery({
     queryKey: ['agent-stats', agentId],
     queryFn: async () => {
-      return await statsApi.getAgentDashboardStats(apiKey!, agentId);
+      return await statsApi.getAgentDashboardStats(accessToken!, agentId);
     },
-    enabled: !!apiKey && !!agentId,
+    enabled: !!accessToken && !!agentId,
     refetchInterval: 30000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
   });
@@ -48,13 +48,13 @@ export default function AgentDashboardPage({ params }: PageProps) {
   } = useQuery({
     queryKey: ['agent-memories', agentId],
     queryFn: async () => {
-      const response = await api.getMemories(apiKey!, {
+      const response = await api.getMemories(accessToken!, {
         agent_id: agentId,
         limit: 10,
       });
       return response.memories;
     },
-    enabled: !!apiKey && !!agentId,
+    enabled: !!accessToken && !!agentId,
     refetchInterval: 30000,
     refetchIntervalInBackground: true,
   });
