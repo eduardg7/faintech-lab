@@ -1,6 +1,7 @@
 """Application configuration using Pydantic Settings."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from typing import Optional
 
 
@@ -42,8 +43,23 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
 
+    # CORS (TD-009: fix wildcard origin conflict with credentials)
+    # Comma-separated list of allowed origins. Set via env var CORS_ORIGINS.
+    # Production must NOT use "*" when allow_credentials=True (CORS spec violation).
+    # Example: CORS_ORIGINS="http://localhost:3000,https://amc.faintech.com"
+    cors_origins_str: str = "http://localhost:3000"  # Env var: CORS_ORIGINS
+
     # Content limits
     max_content_size_bytes: int = 10 * 1024  # 10KB
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse CORS_ORIGINS env var as list (comma-separated)."""
+        if self.cors_origins_str.strip() == "*":
+            # Wildcard mode - but allow_credentials must be False in main.py
+            # This is kept for dev convenience but production should use explicit origins
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins_str.split(",") if origin.strip()]
 
 
 settings = Settings()

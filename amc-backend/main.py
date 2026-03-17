@@ -219,11 +219,14 @@ Standardized error responses with codes:
         requests_per_hour=1000,
     )
 
-    # CORS middleware
+    # CORS middleware (TD-009: fixed wildcard origin conflict with credentials)
+    # Uses settings.cors_origins from env var CORS_ORIGINS (comma-separated)
+    # If wildcard ["*"] is used, allow_credentials must be False (CORS spec)
+    cors_allow_credentials = settings.cors_origins != ["*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=settings.cors_origins,
+        allow_credentials=cors_allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
