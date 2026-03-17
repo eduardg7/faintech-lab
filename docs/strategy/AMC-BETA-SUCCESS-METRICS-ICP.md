@@ -50,7 +50,7 @@ This document defines:
 ### Success Scoring Framework
 
 **Green (Public Launch Ready):** 3/3 Tier 1 + 3/4 Tier 2 + 4/4 Tier 3
-**Yellow (Soft Launch Continue):** 2/3 Tier 1 + 2/4 Tier 2 + 3/4 Tier 3  
+**Yellow (Soft Launch Continue):** 2/3 Tier 1 + 2/4 Tier 2 + 3/4 Tier 3
 **Red (Stop & Fix):** <2 Tier 1 OR <2 Tier 2 OR <3 Tier 3
 
 ---
@@ -68,7 +68,7 @@ This document defines:
 
 **Psychographics:**
 - Values: Local-first, privacy, open source, self-hosting
-- Pain Points: 
+- Pain Points:
   - Fragmented context across multiple AI tools
   - Agent state lost between sessions
   - No unified memory for multi-agent systems

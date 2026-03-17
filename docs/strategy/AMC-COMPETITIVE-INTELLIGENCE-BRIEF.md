@@ -1,8 +1,8 @@
 # Agent Memory Cloud — Competitive Intelligence Brief
 
-**Owner:** strategy  
-**Date:** 2026-03-17  
-**Status:** Draft for Beta Launch  
+**Owner:** strategy
+**Date:** 2026-03-17
+**Status:** Draft for Beta Launch
 **Target Audience:** CPO, CMO, CEO
 
 ---

@@ -1,8 +1,8 @@
 # API Key Generation Flow — Design Specification
 
-**Created:** 2026-03-17  
-**Owner:** faintech-product-designer  
-**Status:** Implementation-ready  
+**Created:** 2026-03-17
+**Owner:** faintech-product-designer
+**Status:** Implementation-ready
 **Priority:** P0 (blocks beta launch)
 
 ---
@@ -11,7 +11,7 @@
 
 Current onboarding flow requires users to **paste** an API key, but there's no UI for **generating** one. This blocks the user journey at Step 3 (API key) and prevents beta users from completing onboarding.
 
-**Evidence:** 
+**Evidence:**
 - `OnboardingFlow.tsx` asks: "Paste active API key"
 - No `/api-keys` route exists in `amc-frontend/src/app/`
 - Backend has `POST /v1/api-keys` endpoint (per MVP-FEATURE-PRIORITIZATION.md)
@@ -41,7 +41,7 @@ Onboarding Step 3: API Key
 
 ### 1. API Key Generation Modal (new)
 
-**Location:** Overlay on `OnboardingFlow.tsx` Step 3  
+**Location:** Overlay on `OnboardingFlow.tsx` Step 3
 **Trigger:** Click "Generate API key" button
 
 **Components:**
@@ -50,15 +50,15 @@ Onboarding Step 3: API Key
   <ModalHeader>
     "Generate API key"
   </ModalHeader>
-  
+
   <ModalBody>
     <Form>
       <Label>Key name</Label>
       <Input placeholder="e.g., 'Production' or 'Testing'" />
-      
+
       <Label>Environment</Label>
       <Select options={["Production", "Development"]} />
-      
+
       <Button variant="primary">Generate key</Button>
     </Form>
   </ModalBody>
@@ -67,7 +67,7 @@ Onboarding Step 3: API Key
 
 ### 2. Key Display Screen (one-time view)
 
-**Location:** Replace modal content after generation  
+**Location:** Replace modal content after generation
 **Behavior:** Key shown ONCE, never again
 
 **Components:**
@@ -76,16 +76,16 @@ Onboarding Step 3: API Key
   <Alert variant="warning">
     "Copy this key now. It won't be shown again."
   </Alert>
-  
+
   <APIKeyValue>
     <MonospaceText>{generated_key}</MonospaceText>
     <CopyButton />
   </APIKeyValue>
-  
+
   <Checkbox>
     "I've saved this key securely"
   </Checkbox>
-  
+
   <Button variant="primary" disabled={!checkbox_checked}>
     Continue to workspace
   </Button>
@@ -94,7 +94,7 @@ Onboarding Step 3: API Key
 
 ### 3. Success State (existing)
 
-**Location:** Current `OnboardingFlow.tsx` Step 5  
+**Location:** Current `OnboardingFlow.tsx` Step 5
 **Change:** Auto-populate `apiKey` state instead of requiring manual paste
 
 ---
@@ -170,14 +170,14 @@ const [keyConfirmed, setKeyConfirmed] = useState(false);
 
 ### Empty State 1: No API keys exist
 
-**Location:** Dashboard `/api-keys` route (future)  
-**Message:** "No API keys yet. Generate your first key to start writing memories."  
+**Location:** Dashboard `/api-keys` route (future)
+**Message:** "No API keys yet. Generate your first key to start writing memories."
 **CTA:** "Generate API key"
 
 ### Empty State 2: Key generation failed
 
-**Location:** API key generation modal  
-**Message:** "Failed to generate key. Please try again or contact support."  
+**Location:** API key generation modal
+**Message:** "Failed to generate key. Please try again or contact support."
 **CTA:** "Retry" + "Contact support" link
 
 ---
@@ -186,20 +186,20 @@ const [keyConfirmed, setKeyConfirmed] = useState(false);
 
 ### Error 1: Invalid key format (paste flow)
 
-**Trigger:** User pastes key that doesn't start with `amc_live_`  
-**Message:** "Invalid API key format. Key should start with 'amc_live_'."  
+**Trigger:** User pastes key that doesn't start with `amc_live_`
+**Message:** "Invalid API key format. Key should start with 'amc_live_'."
 **Recovery:** Clear input, show inline error, re-enable submit on valid input
 
 ### Error 2: Backend unavailable
 
-**Trigger:** POST /v1/api-keys returns 500 or times out  
-**Message:** "Unable to generate key right now. Please try again in a moment."  
+**Trigger:** POST /v1/api-keys returns 500 or times out
+**Message:** "Unable to generate key right now. Please try again in a moment."
 **Recovery:** Retry button, contact support link
 
 ### Error 3: Key already exists
 
-**Trigger:** User tries to generate duplicate key name  
-**Message:** "A key with this name already exists. Choose a different name."  
+**Trigger:** User tries to generate duplicate key name
+**Message:** "A key with this name already exists. Choose a different name."
 **Recovery:** Focus on name input, clear value
 
 ---
@@ -276,15 +276,15 @@ Track these events to measure onboarding success:
 
 ## Timeline
 
-**Design:** Complete (this document)  
-**Engineering:** 1 day estimate  
-**Testing:** 0.5 day  
+**Design:** Complete (this document)
+**Engineering:** 1 day estimate
+**Testing:** 0.5 day
 **Target completion:** 2026-03-18 (before beta launch)
 
 ---
 
-**Next Owner:** faintech-frontend (implementation)  
-**Reviewer:** faintech-product-designer (UX review after implementation)  
+**Next Owner:** faintech-frontend (implementation)
+**Reviewer:** faintech-product-designer (UX review after implementation)
 **Blockers:** None (backend endpoint exists)
 
 ---
