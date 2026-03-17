@@ -2,6 +2,74 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
 
+// Create shared axios instance for API calls
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Request interceptor to add auth header
+apiClient.interceptors.request.use((config) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('amc_access_token') : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor to handle token refresh
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('amc_refresh_token') : null;
+
+        if (!refreshToken) {
+          // No refresh token - logout
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('amc_access_token');
+            localStorage.removeItem('amc_refresh_token');
+            window.location.href = '/';
+          }
+          return Promise.reject(error);
+        }
+
+        // Try to refresh token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+
+        // Store new tokens
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('amc_access_token', access_token);
+          localStorage.setItem('amc_refresh_token', newRefreshToken);
+        }
+
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - logout
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('amc_access_token');
+          localStorage.removeItem('amc_refresh_token');
+          window.location.href = '/';
+        }
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export interface MemoryStats {
   total_memories: number;
   by_type: {
@@ -79,8 +147,7 @@ async function fetchAllMemories(token: string): Promise<RawMemory[]> {
   const memories: RawMemory[] = [];
 
   while (hasNext) {
-    const response = await axios.get(`${API_BASE_URL}/memories`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await apiClient.get('/memories', {
       params: { page, page_size: pageSize },
     });
 

@@ -19,6 +19,12 @@ Dashboard returns 401 errors on all API requests after login.
 
 ## Root Cause Analysis
 
+**CRITICAL BUG FOUND**: Missing refresh token storage
+- Backend `/v1/auth/login` returns `AuthResponse` with `access_token` AND `refresh_token`
+- Frontend `LoginForm` only stores `access_token` via `setApiKey()`
+- Refresh token is **discarded** - impossible to refresh expired access tokens
+- After 30 minutes (access token expiry), all API calls fail with 401
+
 **Primary Issue**: Token expiration without automatic refresh
 - Access tokens expire after 30 minutes
 - Frontend has no refresh logic
