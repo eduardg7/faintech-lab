@@ -105,7 +105,7 @@ class MemoryClient:
     def _headers(self) -> Dict[str, str]:
         """Build request headers."""
         return {
-            "X-API-Key": self.api_key,
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
