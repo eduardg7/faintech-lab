@@ -6,6 +6,7 @@ interface AuthContextType {
   accessToken: string | null;
   refreshToken: string | null;
   setAuth: (accessToken: string, refreshToken: string) => void;
+  setApiKey: (accessToken: string) => void; // Backward compatibility for beta LoginForm
   isAuthenticated: boolean;
   logout: () => void;
 }
@@ -37,6 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('amc_refresh_token', refreshTokenValue);
   }, []);
 
+  // Backward-compatible method for beta LoginForm
+  // Stores only access token; refresh token must be set separately via setAuth
+  const setApiKey = useCallback((accessTokenValue: string) => {
+    setAccessTokenState(accessTokenValue);
+    localStorage.setItem('amc_access_token', accessTokenValue);
+    // Note: Refresh token is not set here - user must re-login after 30min expiry
+  }, []);
+
   const logout = useCallback(() => {
     setAccessTokenState(null);
     setRefreshTokenState(null);
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ accessToken, refreshToken, setAuth, isAuthenticated: !!accessToken, logout }}>
+    <AuthContext.Provider value={{ accessToken, refreshToken, setAuth, setApiKey, isAuthenticated: !!accessToken, logout }}>
       {children}
     </AuthContext.Provider>
   );
