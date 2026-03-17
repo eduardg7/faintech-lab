@@ -2,6 +2,74 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
 
+// Create axios instance for API calls
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Request interceptor to add auth header
+apiClient.interceptors.request.use((config) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('amc_access_token') : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor to handle token refresh
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('amc_refresh_token') : null;
+
+        if (!refreshToken) {
+          // No refresh token - logout
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('amc_access_token');
+            localStorage.removeItem('amc_refresh_token');
+            window.location.href = '/';
+          }
+          return Promise.reject(error);
+        }
+
+        // Try to refresh token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+
+        // Store new tokens
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('amc_access_token', access_token);
+          localStorage.setItem('amc_refresh_token', newRefreshToken);
+        }
+
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - logout
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('amc_access_token');
+          localStorage.removeItem('amc_refresh_token');
+          window.location.href = '/';
+        }
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export interface Memory {
   id: string;
   workspace_id?: string;
@@ -75,6 +143,8 @@ export interface ApiKeysResponse {
   total: number;
 }
 
+// Auth headers are no longer needed - apiClient interceptor handles it
+// Kept for backward compatibility with existing code
 const authHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
 });
@@ -111,8 +181,7 @@ export const api = {
     const pageSize = params?.limit ?? 20;
     const page = Math.floor((params?.offset ?? 0) / pageSize) + 1;
 
-    const response = await axios.get(`${API_BASE_URL}/memories`, {
-      headers: authHeaders(token),
+    const response = await apiClient.get('/memories', {
       params: {
         agent_id: params?.agent_id,
         project_id: params?.project_id,
@@ -141,8 +210,7 @@ export const api = {
       limit?: number;
     }
   ): Promise<SearchResponse> {
-    const response = await axios.get(`${API_BASE_URL}/search/keyword`, {
-      headers: authHeaders(token),
+    const response = await apiClient.get('/search/keyword', {
       params: {
         q: query,
         agent_id: params?.agent_id,
@@ -161,23 +229,17 @@ export const api = {
   },
 
   async validateToken(token: string) {
-    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-      headers: authHeaders(token),
-    });
+    const response = await apiClient.get('/auth/me');
     return response.data;
   },
 
   async getCurrentUser(token: string): Promise<CurrentUser> {
-    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-      headers: authHeaders(token),
-    });
+    const response = await apiClient.get('/auth/me');
     return response.data;
   },
 
   async listApiKeys(token: string): Promise<ApiKeysResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api-keys`, {
-      headers: authHeaders(token),
-    });
+    const response = await apiClient.get('/api-keys');
     return response.data;
   },
 };

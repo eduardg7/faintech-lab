@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 
 interface AuthContextType {
-  apiKey: string | null;
-  setApiKey: (key: string | null) => void;
+  accessToken: string | null;
+  refreshToken: string | null;
+  setAuth: (accessToken: string, refreshToken: string) => void;
+  setApiKey: (accessToken: string) => void; // Backward compatibility for beta LoginForm
   isAuthenticated: boolean;
   logout: () => void;
 }
@@ -12,30 +14,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [apiKey, setApiKeyState] = useState<string | null>(null);
+  const [accessToken, setAccessTokenState] = useState<string | null>(null);
+  const [refreshToken, setRefreshTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load API key from localStorage on mount
-    const storedKey = localStorage.getItem('amc_api_key');
-    if (storedKey) {
-      setApiKeyState(storedKey);
+    // Load both tokens from localStorage on mount
+    const storedAccess = localStorage.getItem('amc_access_token');
+    const storedRefresh = localStorage.getItem('amc_refresh_token');
+    if (storedAccess) {
+      setAccessTokenState(storedAccess);
+    }
+    if (storedRefresh) {
+      setRefreshTokenState(storedRefresh);
     }
     setIsLoading(false);
   }, []);
 
-  const setApiKey = (key: string | null) => {
-    setApiKeyState(key);
-    if (key) {
-      localStorage.setItem('amc_api_key', key);
-    } else {
-      localStorage.removeItem('amc_api_key');
-    }
-  };
+  const setAuth = useCallback((accessTokenValue: string, refreshTokenValue: string) => {
+    setAccessTokenState(accessTokenValue);
+    setRefreshTokenState(refreshTokenValue);
+    localStorage.setItem('amc_access_token', accessTokenValue);
+    localStorage.setItem('amc_refresh_token', refreshTokenValue);
+  }, []);
 
-  const logout = () => {
-    setApiKey(null);
-  };
+  // Backward-compatible method for beta LoginForm
+  // Stores only access token; refresh token must be set separately via setAuth
+  const setApiKey = useCallback((accessTokenValue: string) => {
+    setAccessTokenState(accessTokenValue);
+    localStorage.setItem('amc_access_token', accessTokenValue);
+    // Note: Refresh token is not set here - user must re-login after 30min expiry
+  }, []);
+
+  const logout = useCallback(() => {
+    setAccessTokenState(null);
+    setRefreshTokenState(null);
+    localStorage.removeItem('amc_access_token');
+    localStorage.removeItem('amc_refresh_token');
+  }, []);
 
   if (isLoading) {
     return (
@@ -46,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ apiKey, setApiKey, isAuthenticated: !!apiKey, logout }}>
+    <AuthContext.Provider value={{ accessToken, refreshToken, setAuth, setApiKey, isAuthenticated: !!accessToken, logout }}>
       {children}
     </AuthContext.Provider>
   );
