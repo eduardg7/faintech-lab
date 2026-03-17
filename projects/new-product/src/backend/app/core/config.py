@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     
     # Database
     database_url: str = "sqlite:///./amc.db"  # Default to SQLite for dev
-    database_pool_size: int = 5
-    database_max_overflow: int = 10
+    database_pool_size: int = 50
+    database_max_overflow: int = 100
     
     # API
     api_v1_prefix: str = "/api/v1"
