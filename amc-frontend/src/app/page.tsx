@@ -11,5 +11,12 @@ export default function Home() {
     return <OnboardingFlow />;
   }
 
+  // Check if onboarding was completed previously
+  const onboardingCompleted = typeof window !== 'undefined' && localStorage.getItem('amc_onboarding_completed') === 'true';
+
+  if (!onboardingCompleted) {
+    return <OnboardingFlow />;
+  }
+
   return <MemoryList />;
 }
