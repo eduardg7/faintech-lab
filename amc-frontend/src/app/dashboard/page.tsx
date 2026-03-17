@@ -14,7 +14,7 @@ import ProjectMemoryBreakdown from '@/components/dashboard/ProjectMemoryBreakdow
 import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-  const { apiKey, logout, isAuthenticated } = useAuth();
+  const { accessToken, logout, isAuthenticated } = useAuth();
   const [useMockData, setUseMockData] = useState(false);
 
   // Redirect to home if not authenticated
@@ -34,14 +34,14 @@ export default function DashboardPage() {
     queryFn: async () => {
       if (useMockData) return mockMemoryStats;
       try {
-        return await statsApi.getMemoryStats(apiKey!);
+        return await statsApi.getMemoryStats(accessToken!);
       } catch (error) {
         console.warn('Stats API not available, using mock data');
         setUseMockData(true);
         return mockMemoryStats;
       }
     },
-    enabled: !!apiKey,
+    enabled: !!accessToken,
     refetchInterval: 30000, // Poll every 30 seconds
     refetchIntervalInBackground: true,
   });
@@ -55,13 +55,13 @@ export default function DashboardPage() {
     queryFn: async () => {
       if (useMockData) return mockAgentActivity;
       try {
-        return await statsApi.getAgentActivity(apiKey!, { days: 7, limit: 10 });
+        return await statsApi.getAgentActivity(accessToken!, { days: 7, limit: 10 });
       } catch (error) {
         console.warn('Agent activity API not available, using mock data');
         return mockAgentActivity;
       }
     },
-    enabled: !!apiKey,
+    enabled: !!accessToken,
     refetchInterval: 30000,
     refetchIntervalInBackground: true,
   });
@@ -75,13 +75,13 @@ export default function DashboardPage() {
     queryFn: async () => {
       if (useMockData) return mockProjectBreakdown;
       try {
-        return await statsApi.getProjectBreakdown(apiKey!, { limit: 10 });
+        return await statsApi.getProjectBreakdown(accessToken!, { limit: 10 });
       } catch (error) {
         console.warn('Project breakdown API not available, using mock data');
         return mockProjectBreakdown;
       }
     },
-    enabled: !!apiKey,
+    enabled: !!accessToken,
     refetchInterval: 30000,
     refetchIntervalInBackground: true,
   });
