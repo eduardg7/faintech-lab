@@ -6,6 +6,7 @@ from app.routers.agents import router as agents_router
 from app.routers.auth import router as auth_router
 from app.routers.api_keys import router as api_keys_router
 from app.routers.hybrid_search import router as hybrid_search_router
+from app.routers.health_score import router as health_score_router
 
 __all__ = [
     "memories_router",
@@ -14,4 +15,5 @@ __all__ = [
     "auth_router",
     "api_keys_router",
     "hybrid_search_router",
+    "health_score_router",
 ]
