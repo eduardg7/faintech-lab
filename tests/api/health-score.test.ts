@@ -40,7 +40,16 @@ vi.mock('next/server', () => ({
 }));
 
 // Test data helpers
-const createValidUserData = (overrides = {}) => ({
+const createValidUserData = (overrides: Partial<{
+  userId: string;
+  signupDate: string;
+  lastActiveAt: string;
+  sessionsCount: number;
+  tasksCompleted: number;
+  featuresUsed: string[];
+  npsScore: number | null;
+  feedbackSentiment: 'positive' | 'neutral' | 'negative' | null;
+}> = {}) => ({
   userId: 'user-001',
   signupDate: '2026-02-15T00:00:00Z',
   lastActiveAt: '2026-03-17T14:00:00Z',
@@ -48,7 +57,7 @@ const createValidUserData = (overrides = {}) => ({
   tasksCompleted: 15,
   featuresUsed: ['task_creation', 'agent_collaboration'],
   npsScore: 8,
-  feedbackSentiment: 'positive',
+  feedbackSentiment: 'positive' as const,
   ...overrides,
 });
 

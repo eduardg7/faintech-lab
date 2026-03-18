@@ -36,7 +36,7 @@ const DEFAULT_SPRINT_STATE = {
   }
 };
 
-interface SprintState {
+export interface SprintState {
   sprintId: string;
   status: string;
   title: string;
