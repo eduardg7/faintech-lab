@@ -1,179 +1,295 @@
-"""Health Score API router — ANALYTICS-20260318110700.
+"""Health Score API endpoints.
 
-POST /v1/health-score/calculate — calculate health score for single user
-POST /v1/health-score/batch    — calculate health scores for multiple users
-
-Implements beta user health score calculation per health-metrics.md framework.
+Provides single and batch health score calculation endpoints
+for beta user monitoring and analytics.
 """
 
 from datetime import datetime
-from typing import List, Optional
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.core.health_score import (
-    health_calculator,
-    UserActivityData,
-    HealthScoreCalculator
-)
-from app.routers.auth import AuthContext, get_current_auth_context
+from ..core.health_score import HealthScoreCalculator, UserActivityData
 
-router = APIRouter(tags=["Health Score"])
+router = APIRouter(prefix="/v1/health-score", tags=["health-score"])
 
-
-# ── Schemas ────────────────────────────────────────────────────────────────────
+# Singleton calculator instance
+calculator = HealthScoreCalculator()
 
 
 class UserActivityRequest(BaseModel):
-    """Request schema for single user health score calculation."""
-    
+    """Request model for single user health score calculation."""
+
     # Engagement metrics
-    sessions_per_week: float = Field(default=0.0, ge=0.0, description="Sessions per week")
-    avg_session_duration_minutes: float = Field(default=0.0, ge=0.0, description="Average session duration in minutes")
-    messages_per_week: float = Field(default=0.0, ge=0.0, description="Messages per week")
-    
+    sessions_per_week: float = Field(default=0.0, ge=0.0)
+    avg_session_duration_minutes: float = Field(default=0.0, ge=0.0)
+    messages_per_week: float = Field(default=0.0, ge=0.0)
+
     # Feature adoption metrics
-    agents_created: int = Field(default=0, ge=0, description="Number of agents created")
-    agents_active_last_7d: int = Field(default=0, ge=0, description="Agents active in last 7 days")
-    memories_stored: int = Field(default=0, ge=0, description="Number of memories stored")
-    projects_created: int = Field(default=0, ge=0, description="Number of projects created")
-    search_queries_per_week: float = Field(default=0.0, ge=0.0, description="Search queries per week")
-    
-    # Feedback sentiment metrics
-    in_app_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0, description="In-app rating (0-5)")
-    nps_score: Optional[int] = Field(default=None, ge=0, le=10, description="NPS score (0-10)")
-    text_feedback_sentiment: Optional[float] = Field(default=None, ge=0.0, le=10.0, description="Text feedback sentiment (0-10)")
-    support_ticket_sentiment: Optional[float] = Field(default=None, ge=0.0, le=10.0, description="Support ticket sentiment (0-10)")
-    
+    agents_created: int = Field(default=0, ge=0)
+    agents_active_last_7d: int = Field(default=0, ge=0)
+    memories_stored: int = Field(default=0, ge=0)
+    projects_created: int = Field(default=0, ge=0)
+    search_queries_per_week: float = Field(default=0.0, ge=0.0)
+
+    # Feedback sentiment metrics (optional)
+    in_app_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    nps_score: Optional[int] = Field(default=None, ge=0, le=10)
+    text_feedback_sentiment: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+    support_ticket_sentiment: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+
     # Consistency metrics
-    daily_streak_days: int = Field(default=0, ge=0, description="Daily streak in days")
-    weekly_frequency: float = Field(default=0.0, ge=0.0, le=1.0, description="Weekly frequency (0-1)")
-    device_consistency: float = Field(default=0.0, ge=0.0, le=1.0, description="Device consistency (0-1)")
+    daily_streak_days: int = Field(default=0, ge=0)
+    weekly_frequency: float = Field(default=0.0, ge=0.0, le=1.0)
+    device_consistency: float = Field(default=0.0, ge=0.0, le=1.0)
 
-
-class HealthScoreResponse(BaseModel):
-    """Response schema with complete health score breakdown."""
-    
-    health_score: float = Field(description="Final health score (0-10)")
-    components: dict = Field(description="Component scores")
-    health_tier: str = Field(description="Health tier classification")
-    calculation_details: dict = Field(description="Full calculation breakdown")
+    # Metadata
+    user_id: str = Field(..., description="Unique user identifier")
 
 
 class BatchHealthScoreRequest(BaseModel):
-    """Request schema for batch health score calculation."""
-    
-    user_data_list: List[UserActivityRequest] = Field(
-        description="List of user activity data for batch calculation"
+    """Request model for batch health score calculation."""
+
+    users: List[UserActivityRequest] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of user activity data for batch processing"
     )
+
+
+class HealthScoreResponse(BaseModel):
+    """Response model for health score calculation."""
+
+    user_id: str
+    health_score: float
+    health_tier: str
+    components: Dict[str, float]
+    calculation_details: Dict[str, Any]
+    calculated_at: datetime
 
 
 class BatchHealthScoreResponse(BaseModel):
-    """Response schema for batch health score calculation."""
-    
-    health_scores: List[HealthScoreResponse] = Field(description="List of health scores")
-    total_users: int = Field(description="Total number of users processed")
+    """Response model for batch health score calculation."""
+
+    scores: List[HealthScoreResponse]
+    total_users: int
+    average_score: Optional[float] = None
+    tier_distribution: Dict[str, int]
 
 
-# ── Endpoints ───────────────────────────────────────────────────────────────────
+def _convert_request_to_data(
+    request: UserActivityRequest
+) -> UserActivityData:
+    """Convert API request to UserActivityData domain model."""
+    return UserActivityData(
+        user_id=request.user_id,
+        sessions_per_week=request.sessions_per_week,
+        avg_session_duration_minutes=request.avg_session_duration_minutes,
+        messages_per_week=request.messages_per_week,
+        agents_created=request.agents_created,
+        agents_active_last_7d=request.agents_active_last_7d,
+        memories_stored=request.memories_stored,
+        projects_created=request.projects_created,
+        search_queries_per_week=request.search_queries_per_week,
+        in_app_rating=request.in_app_rating,
+        nps_score=request.nps_score,
+        text_feedback_sentiment=request.text_feedback_sentiment,
+        support_ticket_sentiment=request.support_ticket_sentiment,
+        daily_streak_days=request.daily_streak_days,
+        weekly_frequency=request.weekly_frequency,
+        device_consistency=request.device_consistency,
+        calculation_date=datetime.utcnow()
+    )
 
 
-@router.post("/calculate", response_model=HealthScoreResponse)
+def _convert_result_to_response(
+    result: Dict[str, Any],
+    user_id: str
+) -> HealthScoreResponse:
+    """Convert calculation result to API response."""
+    return HealthScoreResponse(
+        user_id=user_id,
+        health_score=result["health_score"],
+        health_tier=result["health_tier"],
+        components=result["components"],
+        calculation_details=result["calculation_details"],
+        calculated_at=datetime.utcnow()
+    )
+
+
+@router.post(
+    "/calculate",
+    response_model=HealthScoreResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Calculate health score for a single user",
+    description="""
+    Calculates a comprehensive health score (0-10) for a single user based on
+    engagement, feature adoption, feedback sentiment, and consistency metrics.
+
+    The health score is calculated as:
+    Health Score = (Engagement × 0.4) + (FeatureAdoption × 0.3) +
+                   (FeedbackSentiment × 0.2) + (Consistency × 0.1)
+
+    Health tiers:
+    - Champion (9.0-10.0): Highly engaged, consistent users
+    - Healthy (7.0-8.9): Active users with good engagement
+    - At-Risk (5.0-6.9): Users showing declining engagement
+    - Critical (0.0-4.9): Users at risk of churn
+    """
+)
 async def calculate_health_score(
-    user_data: UserActivityRequest,
-    auth: AuthContext = Depends(get_current_auth_context)
+    request: UserActivityRequest
 ) -> HealthScoreResponse:
     """
     Calculate health score for a single user.
-    
-    Returns complete breakdown including:
-    - Final health score (0-10)
-    - Component scores (engagement, feature_adoption, feedback_sentiment, consistency)
-    - Health tier classification (Champion, Healthy, At-Risk, Critical)
-    - Full calculation details with weights
-    
-    Authentication: Requires bearer token or workspace API key.
+
+    Args:
+        request: User activity data including engagement, adoption,
+                 feedback, and consistency metrics
+
+    Returns:
+        HealthScoreResponse: Complete health score with component breakdown
     """
-    # Convert request to domain model
-    activity_data = UserActivityData(
-        user_id=auth.user_id,
-        calculation_date=datetime.utcnow(),
-        sessions_per_week=user_data.sessions_per_week,
-        avg_session_duration_minutes=user_data.avg_session_duration_minutes,
-        messages_per_week=user_data.messages_per_week,
-        agents_created=user_data.agents_created,
-        agents_active_last_7d=user_data.agents_active_last_7d,
-        memories_stored=user_data.memories_stored,
-        projects_created=user_data.projects_created,
-        search_queries_per_week=user_data.search_queries_per_week,
-        in_app_rating=user_data.in_app_rating,
-        nps_score=user_data.nps_score,
-        text_feedback_sentiment=user_data.text_feedback_sentiment,
-        support_ticket_sentiment=user_data.support_ticket_sentiment,
-        daily_streak_days=user_data.daily_streak_days,
-        weekly_frequency=user_data.weekly_frequency,
-        device_consistency=user_data.device_consistency
-    )
-    
-    # Calculate health score
-    result = health_calculator.calculate_health_score(activity_data)
-    
-    return HealthScoreResponse(**result)
+    try:
+        # Convert request to domain model
+        user_data = _convert_request_to_data(request)
+
+        # Calculate health score
+        result = calculator.calculate_health_score(user_data)
+
+        # Convert to response model
+        return _convert_result_to_response(result, request.user_id)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to calculate health score: {str(e)}"
+        )
 
 
-@router.post("/batch", response_model=BatchHealthScoreResponse)
+@router.post(
+    "/batch",
+    response_model=BatchHealthScoreResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Calculate health scores for multiple users",
+    description="""
+    Batch calculates health scores for up to 100 users in a single request.
+    Returns individual scores plus aggregate statistics.
+
+    Aggregates provided:
+    - Average health score across all users
+    - Distribution of users across health tiers
+    - Total users processed
+    """
+)
 async def calculate_batch_health_scores(
-    batch_request: BatchHealthScoreRequest,
-    auth: AuthContext = Depends(get_current_auth_context)
+    request: BatchHealthScoreRequest
 ) -> BatchHealthScoreResponse:
     """
-    Calculate health scores for multiple users (batch processing).
-    
-    Efficiently processes multiple user health calculations in a single request.
-    Returns array of health score results with same structure as single calculation.
-    
-    Authentication: Requires bearer token or workspace API key.
-    Rate limit: Maximum 50 users per batch request.
+    Calculate health scores for multiple users.
+
+    Args:
+        request: Batch request containing list of user activity data
+
+    Returns:
+        BatchHealthScoreResponse: Individual scores plus aggregate statistics
     """
-    # Validate batch size
-    if len(batch_request.user_data_list) > 50:
+    try:
+        # Convert all requests to domain models
+        user_data_list = [
+            _convert_request_to_data(user_req)
+            for user_req in request.users
+        ]
+
+        # Calculate batch health scores
+        results = calculator.calculate_batch_health_scores(user_data_list)
+
+        # Convert to response models
+        scores = [
+            _convert_result_to_response(result, user_data.user_id)
+            for result, user_data in zip(results, user_data_list)
+        ]
+
+        # Calculate aggregate statistics
+        total_users = len(scores)
+        if total_users > 0:
+            average_score = sum(s.health_score for s in scores) / total_users
+        else:
+            average_score = None
+
+        # Calculate tier distribution
+        tier_distribution: Dict[str, int] = {
+            "Champion": 0,
+            "Healthy": 0,
+            "At-Risk": 0,
+            "Critical": 0
+        }
+        for score in scores:
+            tier_distribution[score.health_tier] += 1
+
+        return BatchHealthScoreResponse(
+            scores=scores,
+            total_users=total_users,
+            average_score=average_score,
+            tier_distribution=tier_distribution
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Batch size exceeds maximum of 50 users per request"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to calculate batch health scores: {str(e)}"
         )
-    
-    # Convert requests to domain models
-    activity_data_list = [
-        UserActivityData(
-            user_id=f"{auth.user_id}_batch_{i}",
-            calculation_date=datetime.utcnow(),
-            sessions_per_week=user.sessions_per_week,
-            avg_session_duration_minutes=user.avg_session_duration_minutes,
-            messages_per_week=user.messages_per_week,
-            agents_created=user.agents_created,
-            agents_active_last_7d=user.agents_active_last_7d,
-            memories_stored=user.memories_stored,
-            projects_created=user.projects_created,
-            search_queries_per_week=user.search_queries_per_week,
-            in_app_rating=user.in_app_rating,
-            nps_score=user.nps_score,
-            text_feedback_sentiment=user.text_feedback_sentiment,
-            support_ticket_sentiment=user.support_ticket_sentiment,
-            daily_streak_days=user.daily_streak_days,
-            weekly_frequency=user.weekly_frequency,
-            device_consistency=user.device_consistency
-        )
-        for i, user in enumerate(batch_request.user_data_list)
-    ]
-    
-    # Calculate health scores
-    health_scores = health_calculator.calculate_batch_health_scores(activity_data_list)
-    
-    return BatchHealthScoreResponse(
-        health_scores=[HealthScoreResponse(**score) for score in health_scores],
-        total_users=len(activity_data_list)
-    )
+
+
+@router.get(
+    "/formula",
+    status_code=status.HTTP_200_OK,
+    summary="Get health score calculation formula",
+    description="""
+    Returns the health score calculation formula and weight distribution
+    for transparency and debugging purposes.
+    """
+)
+async def get_health_score_formula() -> Dict[str, Any]:
+    """
+    Get health score calculation formula.
+
+    Returns:
+        Dictionary containing formula, weights, and tier thresholds
+    """
+    return {
+        "formula": "Health Score = (Engagement × 0.4) + (FeatureAdoption × 0.3) + (FeedbackSentiment × 0.2) + (Consistency × 0.1)",
+        "weights": {
+            "engagement": calculator.engagement_weight,
+            "feature_adoption": calculator.feature_adoption_weight,
+            "feedback_sentiment": calculator.feedback_sentiment_weight,
+            "consistency": calculator.consistency_weight
+        },
+        "component_ranges": {
+            "engagement": "0-10 (sessions, duration, messages)",
+            "feature_adoption": "0-10 (agents, memories, projects, search)",
+            "feedback_sentiment": "0-10 (ratings, NPS, text sentiment, support)",
+            "consistency": "0-10 (streak, frequency, device)"
+        },
+        "health_tiers": {
+            "Champion": {
+                "range": "9.0-10.0",
+                "description": "Highly engaged, consistent users"
+            },
+            "Healthy": {
+                "range": "7.0-8.9",
+                "description": "Active users with good engagement"
+            },
+            "At-Risk": {
+                "range": "5.0-6.9",
+                "description": "Users showing declining engagement"
+            },
+            "Critical": {
+                "range": "0.0-4.9",
+                "description": "Users at risk of churn"
+            }
+        }
+    }
