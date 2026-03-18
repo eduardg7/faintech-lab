@@ -5,8 +5,8 @@
  * Run this on system startup to ensure data infrastructure is available.
  */
 
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const SPRINT_STATE_PATH = '/Users/eduardgridan/faintech-lab/SPRINT_STATE.json';
 const DEFAULT_SPRINT_STATE = {

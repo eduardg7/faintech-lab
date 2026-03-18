@@ -295,7 +295,7 @@ export async function getCrossAgentContext(
   });
 
   // Get unique agents from results
-  const agents = [...new Set(primaryResults.map(r => r.agentId))];
+  const agents = Array.from(new Set(primaryResults.map(r => r.agentId)));
 
   // Read full memory from each relevant agent
   const contextByAgent = new Map<string, string>();
