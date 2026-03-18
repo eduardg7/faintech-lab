@@ -126,7 +126,7 @@ export default function LoginForm() {
           </div>
         </header>
 
-        <main className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr]">
+        <main id="main-content" className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr]">
           <section className="space-y-8">
             <div className="grid gap-4 md:grid-cols-3">
               {productScreens.map((screen) => (
