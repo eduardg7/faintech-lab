@@ -17,6 +17,7 @@ from app.core.errors import (
 )
 from app.core.logging import setup_logging, get_logger
 from app.core.metrics import metrics_store, record_request
+from app.core.health_score import health_calculator, HealthScoreCalculator, UserActivityData
 
 __all__ = [
     "JobQueue",
@@ -37,4 +38,7 @@ __all__ = [
     "get_logger",
     "metrics_store",
     "record_request",
+    "health_calculator",
+    "HealthScoreCalculator",
+    "UserActivityData",
 ]
