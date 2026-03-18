@@ -37,7 +37,7 @@
 ### [DEC-001] Inter-Agent Communication Layer
 **Date:** 2026-03-16
 **Owner:** faintech-cto
-**Status:** pending
+**Status:** approved
 **Priority:** P0
 
 **Context:**
@@ -51,9 +51,24 @@
 - **Option C:** Build HTTP-based messaging API (3-5 days, medium risk)
 - **Option D:** Integrate external broker (RabbitMQ/Redis) (5-7 days, proven but complex)
 
-**Decision:** PENDING - Awaiting CTO evaluation
+**Decision:** ✅ APPROVED - Implement Option C (HTTP-based messaging API)
 
-**Outcome:** TBD
+**Rationale:**
+- HTTP-based messaging provides best balance of feasibility (uses existing OpenClaw HTTP capabilities)
+- Architectural fit (REST APIs already in use in faintech-lab)
+- Medium risk is acceptable for P0 priority
+- Real-time achievable via SSE or polling
+- Industry-standard with proven patterns
+- Scales to 100+ agents without infrastructure overhead
+
+**Trade-offs Accepted:**
+- 3-5 day implementation timeline (vs 1 day for Option A or 2-3 days for Option B)
+- Requires HTTP server management (but OpenClaw handles this)
+- No external broker dependency (defer to Sprint 4 if HTTP-based proves insufficient)
+
+**Outcome:** Implementation plan created (4 phases: API design, implementation, integration, testing)
+**Timeline:** Complete by Mar 23, 2026 (5 days)
+**Evidence:** `/Users/eduardgridan/faintech-lab/docs/research/DEC-001-DECISION-INTER-AGENT-COMMUNICATION.md`
 
 ### [DEC-002] Role-Specific Productivity Metrics Framework
 **Date:** 2026-03-16

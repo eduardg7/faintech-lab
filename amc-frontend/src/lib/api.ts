@@ -1,10 +1,32 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
 
-// Create axios instance for API calls
+// Create axios instance for API calls with retry configuration
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+});
+
+// Add retry interceptor with exponential backoff
+axiosRetry(apiClient, {
+  retries: 3,
+  retryDelay: (retryCount: number) => {
+    // Exponential backoff: 1000ms, 2000ms, 4000ms
+    return Math.min(1000 * Math.pow(2, retryCount), 10000);
+  },
+  retryCondition: (error: any) => {
+    // Retry on: network errors, 5xx errors, timeouts
+    return (
+      !error.response ||
+      (error.response?.status >= 500 && error.response?.status < 600) ||
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ETIMEDOUT'
+    );
+  },
+  onRetry: (retryCount: number, error: any, requestConfig: any) => {
+    console.log(`Retry attempt ${retryCount} for ${requestConfig.url}:`, error.message);
+  },
 });
 
 // Request interceptor to add auth header

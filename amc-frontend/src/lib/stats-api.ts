@@ -158,6 +158,10 @@ interface RawMemory {
   updated_at: string | null;
 }
 
+// Re-export RawMemory as Memory for backward compatibility
+// Add 'type' as alias for 'memory_type' for component compatibility
+export type Memory = RawMemory & { type: RawMemory['memory_type'] };
+
 async function fetchAllMemories(token: string): Promise<RawMemory[]> {
   const pageSize = 100;
   let page = 1;
@@ -391,4 +395,114 @@ export const mockAgentActivity: AgentActivityResponse = {
 export const mockProjectBreakdown: ProjectBreakdownResponse = {
   projects: [],
   total: 0,
+};
+
+// Health Score Types
+export interface HealthScoreUser {
+  user_id: string;
+  health_score: number;
+  components: {
+    engagement: number;
+    feature_adoption: number;
+    feedback_sentiment: number;
+    consistency: number;
+  };
+  health_tier: 'Champion' | 'Healthy' | 'At-Risk' | 'Critical';
+}
+
+export interface HealthScoreBatchResponse {
+  results: HealthScoreUser[];
+  total_users: number;
+  average_health_score: number;
+  tier_distribution: {
+    Champion: number;
+    Healthy: number;
+    'At-Risk': number;
+    Critical: number;
+  };
+}
+
+// Generic API client for memories
+export const api = {
+  async getMemories(token: string, params?: { agent_id?: string; limit?: number }) {
+    const response = await apiClient.get('/memories', {
+      params: { page: 1, page_size: params?.limit || 100, agent_id: params?.agent_id },
+    });
+    return {
+      memories: response.data.memories || [],
+      has_next: response.data.has_next || false,
+    };
+  },
+};
+
+export const healthScoreApi = {
+  async calculateBatchHealthScores(users: Array<{
+    user_id: string;
+    sessions_per_week?: number;
+    avg_session_duration_minutes?: number;
+    messages_per_week?: number;
+    agents_created?: number;
+    agents_active_last_7d?: number;
+    memories_stored?: number;
+    projects_created?: number;
+    search_queries_per_week?: number;
+    in_app_rating?: number;
+    nps_score?: number;
+    text_feedback_sentiment?: number;
+    support_ticket_sentiment?: number;
+    daily_streak_days?: number;
+    weekly_frequency?: number;
+    device_consistency?: number;
+  }>): Promise<HealthScoreBatchResponse> {
+    const response = await apiClient.post('/health-score/batch', { users });
+    return response.data;
+  },
+
+  async calculateHealthScore(userData: {
+    user_id: string;
+    sessions_per_week?: number;
+    avg_session_duration_minutes?: number;
+    messages_per_week?: number;
+    agents_created?: number;
+    agents_active_last_7d?: number;
+    memories_stored?: number;
+    projects_created?: number;
+    search_queries_per_week?: number;
+    in_app_rating?: number;
+    nps_score?: number;
+    text_feedback_sentiment?: number;
+    support_ticket_sentiment?: number;
+    daily_streak_days?: number;
+    weekly_frequency?: number;
+    device_consistency?: number;
+  }): Promise<HealthScoreUser> {
+    const response = await apiClient.post('/health-score/calculate', userData);
+    return response.data;
+  },
+};
+
+export const mockHealthScoreData: HealthScoreBatchResponse = {
+  results: [
+    {
+      user_id: 'user-001',
+      health_score: 8.5,
+      components: { engagement: 9.0, feature_adoption: 8.5, feedback_sentiment: 8.0, consistency: 8.5 },
+      health_tier: 'Champion',
+    },
+    {
+      user_id: 'user-002',
+      health_score: 6.8,
+      components: { engagement: 7.0, feature_adoption: 6.5, feedback_sentiment: 7.0, consistency: 6.5 },
+      health_tier: 'Healthy',
+    },
+    {
+      user_id: 'user-003',
+      health_score: 4.2,
+      components: { engagement: 4.0, feature_adoption: 5.0, feedback_sentiment: 4.0, consistency: 4.0 },
+      health_tier: 'At-Risk',
+    },
+  ],
+  total_users: 3,
+  average_health_score: 6.5,
+  tier_distribution: { Champion: 1, Healthy: 1, 'At-Risk': 1, Critical: 0 },
 };

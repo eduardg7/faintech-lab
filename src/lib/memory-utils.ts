@@ -22,9 +22,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Configuration
-const AGENTS_BASE_PATH = path.join(process.env.HOME || '', '.openclaw', 'agents');
 const MEMORY_FILE = 'MEMORY.md';
 const DAILY_NOTES_DIR = 'memory';
+
+/**
+ * Get the base path for agents (lazy evaluation for testability)
+ */
+function getAgentsBasePath(): string {
+  return path.join(process.env.HOME || '', '.openclaw', 'agents');
+}
 
 export interface MemorySearchResult {
   agentId: string;
@@ -60,7 +66,7 @@ export interface GlobalMemoryOptions {
  * Get the base path for an agent's memory files
  */
 export function getAgentMemoryPath(agentId: string): string {
-  return path.join(AGENTS_BASE_PATH, agentId);
+  return path.join(getAgentsBasePath(), agentId);
 }
 
 /**
@@ -75,13 +81,14 @@ export function agentMemoryExists(agentId: string): boolean {
  * List all available agents with memory
  */
 export function listAvailableAgents(): string[] {
-  if (!fs.existsSync(AGENTS_BASE_PATH)) {
+  const basePath = getAgentsBasePath();
+  if (!fs.existsSync(basePath)) {
     return [];
   }
 
-  return fs.readdirSync(AGENTS_BASE_PATH)
+  return fs.readdirSync(basePath)
     .filter(name => {
-      const agentPath = path.join(AGENTS_BASE_PATH, name);
+      const agentPath = path.join(basePath, name);
       return fs.statSync(agentPath).isDirectory();
     });
 }
@@ -288,7 +295,7 @@ export async function getCrossAgentContext(
   });
 
   // Get unique agents from results
-  const agents = [...new Set(primaryResults.map(r => r.agentId))];
+  const agents = Array.from(new Set(primaryResults.map(r => r.agentId)));
 
   // Read full memory from each relevant agent
   const contextByAgent = new Map<string, string>();
