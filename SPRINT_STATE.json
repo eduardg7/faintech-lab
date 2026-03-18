@@ -174,6 +174,39 @@
     "inProgressExperiments": 2,
     "partialExperiments": 1
   },
+  "velocity": {
+    "day3_20260318": {
+      "tasksCompleted": 12,
+      "filesCreated": 10,
+      "commits": 6,
+      "linesAdded": 1500,
+      "keyOutputs": [
+        "GTM Social Media Assets (5 ACs)",
+        "GTM Press Kit (5 ACs)",
+        "Agent Productivity Report",
+        "Experiment Backlog Priority",
+        "LAB State Update",
+        "Permission Boundaries Review"
+      ],
+      "topPerformer": {
+        "agent": "CEO",
+        "tasks": 18
+      },
+      "blockers": [
+        "LAB-006 cross-agent handoff test pending",
+        "DEC-001 inter-agent communication decision pending"
+      ]
+    },
+    "betaLaunchReadiness": {
+      "landingPage": "ready",
+      "socialMedia": "ready",
+      "pressKit": "ready",
+      "healthScore": "ready",
+      "qualificationForm": "pending",
+      "targetDate": "2026-03-24",
+      "daysRemaining": 6
+    }
+  },
   "metadata": {
     "createdAt": "2026-03-16T20:00:00Z",
     "lastUpdated": "2026-03-18T12:49:00Z",
