@@ -8,7 +8,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const SPRINT_STATE_PATH = '/Users/eduardgridan/faintech-lab/SPRINT_STATE.json';
+/**
+ * Get the sprint state file path (lazy evaluation for testability)
+ */
+function getSprintStatePath(): string {
+  return process.env.SPRINT_STATE_PATH || '/Users/eduardgridan/faintech-lab/SPRINT_STATE.json';
+}
+
 const DEFAULT_SPRINT_STATE = {
   sprintId: 'sprint-unknown',
   status: 'initializing',
@@ -61,7 +67,7 @@ interface SprintState {
  */
 export function sprintStateExists(): boolean {
   try {
-    return fs.existsSync(SPRINT_STATE_PATH);
+    return fs.existsSync(getSprintStatePath());
   } catch (error) {
     console.error('Error checking SPRINT_STATE.json:', error);
     return false;
@@ -73,7 +79,7 @@ export function sprintStateExists(): boolean {
  */
 export function readSprintState(): SprintState | null {
   try {
-    const content = fs.readFileSync(SPRINT_STATE_PATH, 'utf-8');
+    const content = fs.readFileSync(getSprintStatePath(), 'utf-8');
     const state = JSON.parse(content) as SprintState;
     return state;
   } catch (error) {
@@ -88,7 +94,7 @@ export function readSprintState(): SprintState | null {
 export function createDefaultSprintState(): SprintState {
   try {
     fs.writeFileSync(
-      SPRINT_STATE_PATH,
+      getSprintStatePath(),
       JSON.stringify(DEFAULT_SPRINT_STATE, null, 2),
       'utf-8'
     );
@@ -166,7 +172,7 @@ export function updateSprintState(updates: Partial<SprintState>): SprintState {
 
   try {
     fs.writeFileSync(
-      SPRINT_STATE_PATH,
+      getSprintStatePath(),
       JSON.stringify(updatedState, null, 2),
       'utf-8'
     );
