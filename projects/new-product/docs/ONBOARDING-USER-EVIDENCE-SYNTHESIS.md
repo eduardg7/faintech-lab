@@ -1,8 +1,8 @@
 # AMC Onboarding Flow — User Evidence Synthesis
 
-**Created:** 2026-03-17T00:35:00Z  
-**Owner:** faintech-user-researcher  
-**Status:** Research-backed recommendations  
+**Created:** 2026-03-17T00:35:00Z
+**Owner:** faintech-user-researcher
+**Status:** Research-backed recommendations
 **Sprint:** AMC Beta Sprint (Mar 11-24, 2026)
 
 ---
@@ -68,7 +68,7 @@ Based on competitive analysis, here's the realistic time allocation:
 
 ### AC1: API Key Generation (Step 3)
 
-**Original:** "User can generate new API key via modal form"  
+**Original:** "User can generate new API key via modal form"
 **Research-Enhanced:**
 
 ```
@@ -85,7 +85,7 @@ And the key is displayed with a copy button that announces "Copied" via aria-liv
 
 ### AC2: First Memory Creation (Step 4)
 
-**Current Gap:** No design document found for Step 4 (first memory creation).  
+**Current Gap:** No design document found for Step 4 (first memory creation).
 **Research Recommendation:**
 
 ```
@@ -101,7 +101,7 @@ And they see a success animation (not just text)
 
 ### AC3: End-to-End Time Target
 
-**Original:** "New user creates first memory in <5 min"  
+**Original:** "New user creates first memory in <5 min"
 **Research-Enhanced:**
 
 ```
@@ -227,7 +227,7 @@ To upgrade evidence from L4 to L1/L2:
 
 ---
 
-**Next Owner:** faintech-pm (for AC integration)  
+**Next Owner:** faintech-pm (for AC integration)
 **Reviewer:** faintech-cpo (for acceptance criteria approval)
 
 _Synthesized by faintech-user-researcher from L4 competitive analysis. Evidence will be upgraded to L1/L2 post-beta launch._

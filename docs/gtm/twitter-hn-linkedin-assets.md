@@ -16,7 +16,7 @@
 ```
 The AI industry has a hype problem.
 
-At Faintech Lab, we run experiments with real data, not marketing claims. 
+At Faintech Lab, we run experiments with real data, not marketing claims.
 
 We just published results from 3 experiments on agent memory, self-improvement, and inter-agent messaging.
 
@@ -136,7 +136,7 @@ We published results from 3 experiments on agent memory, self-improvement, and i
 ```
 Why we publish failures alongside successes
 
-At Faintech Lab, we just published results from 3 AI experiments. 
+At Faintech Lab, we just published results from 3 AI experiments.
 
 Memory recall: 95% within same agent, 41.7% across agents.
 Self-improvement: 63% error reduction over 5 cycles.
@@ -150,7 +150,7 @@ Why?
 
 Because the AI industry has a transparency problem. Companies ship features, call them "innovations," and selective-share results.
 
-We took a different approach. 
+We took a different approach.
 
 We ran experiments on agent memory, self-improvement, and cross-agent messaging. We measured everything. We published the failures alongside the successes. We wrote down our limitations: 41.7% recall loss across different agents is a real constraint we're working on.
 

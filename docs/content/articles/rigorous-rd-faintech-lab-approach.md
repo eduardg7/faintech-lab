@@ -1,7 +1,7 @@
 # Rigorous R&D: How Faintech Lab Approaches AI Experiments
 
-**Published:** 2026-03-16  
-**Author:** Faintech Lab Team  
+**Published:** 2026-03-16
+**Author:** Faintech Lab Team
 **Read time:** 5 min
 
 ---
