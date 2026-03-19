@@ -14,7 +14,17 @@ pip install agentmemory
 
 Sign up at [faintech.dev](https://faintech.dev) and generate an API key from your dashboard.
 
-### 2. Initialize the Client
+### 2. Authentication
+
+The SDK uses **Bearer token authentication**. Your API key is automatically sent in the `Authorization` header:
+
+```
+Authorization: Bearer amc_live_your_api_key_here
+```
+
+**Important:** Never share your API key or commit it to version control. Use environment variables instead.
+
+### 3. Initialize the Client
 
 ```python
 from agentmemory import MemoryClient
@@ -22,7 +32,7 @@ from agentmemory import MemoryClient
 # Initialize with API key
 client = MemoryClient(api_key="your-api-key-here")
 
-# Or use environment variable
+# Or use environment variable (recommended)
 # export AGENT_MEMORY_API_KEY="your-api-key-here"
 client = MemoryClient()
 ```
@@ -460,6 +470,51 @@ MIT License - see [LICENSE](LICENSE) for details.
 - 📧 Email: support@faintech.dev
 - 📖 Documentation: https://docs.faintech.dev
 - 🐛 Issues: https://github.com/faintech/agentmemory-sdk-python/issues
+
+## Troubleshooting
+
+### Authentication Errors (401 Unauthorized)
+
+If you receive 401 errors:
+
+1. **Check your API key format**: Keys should start with `amc_live_`
+2. **Verify the key is active**: Log into your dashboard and ensure the key isn't revoked
+3. **Check the Authorization header**: The SDK sends `Authorization: Bearer {api_key}` - verify this in your network logs
+4. **Environment variable**: Ensure `AGENT_MEMORY_API_KEY` is set correctly
+
+Example debugging:
+```python
+import os
+print(f"API Key set: {'AGENT_MEMORY_API_KEY' in os.environ}")
+print(f"API Key prefix: {os.environ.get('AGENT_MEMORY_API_KEY', '')[:10]}...")
+```
+
+### Connection Errors
+
+If you can't connect to the API:
+
+1. **Check base URL**: Default is `https://api.faintech.dev/v1`
+2. **Network access**: Ensure your network allows HTTPS connections
+3. **Firewall**: Check if corporate firewall blocks the API
+
+For self-hosted instances:
+```python
+client = MemoryClient(
+    api_key="your-key",
+    base_url="http://your-instance.com/v1"
+)
+```
+
+### Rate Limiting (429 Too Many Requests)
+
+The API has rate limits:
+- 60 requests/minute
+- 1000 requests/hour
+
+The SDK automatically retries on 429 errors. If you still hit limits:
+- Reduce request frequency
+- Implement client-side caching
+- Contact support for limit increases
 
 ## Contributing
 
