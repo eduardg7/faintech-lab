@@ -86,6 +86,14 @@
         "outcome": "SPRINT_STATE.json with auto-recovery validated"
       }
     ],
+    "productUpdates": [
+      {
+        "date": "2026-03-18",
+        "product": "AMC (Agent Memory Cloud)",
+        "update": "Auth fix PR #75 ready for review, beta launch on track for Mar 24",
+        "status": "on_track"
+      }
+    ],
     "competitiveIntelligence": [
       {
         "id": "CI-20260318-001",
@@ -209,8 +217,8 @@
   },
   "metadata": {
     "createdAt": "2026-03-16T20:00:00Z",
-    "lastUpdated": "2026-03-18T12:49:00Z",
+    "lastUpdated": "2026-03-18T21:25:00Z",
     "version": "2.2",
-    "updateReason": "Added CI-20260318-001 competitive intelligence research finding to findings.competitiveIntelligence, updated lastUpdated timestamp"
+    "updateReason": "Merge conflict resolution: combined productUpdates and competitiveIntelligence sections"
   }
 }

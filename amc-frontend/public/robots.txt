@@ -1,0 +1,9 @@
+# Faintech Lab - robots.txt
+# Allow all crawlers to access public landing page
+
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /api
+
+Sitemap: https://faintech-lab.com/sitemap.xml
