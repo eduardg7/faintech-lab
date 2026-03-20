@@ -359,6 +359,7 @@ Standardized error responses with codes:
         hybrid_search_router,
         health_score_router,
     )
+    from app.routers.analytics import router as analytics_router
     from app.routers.semantic import router as semantic_router
     from app.routers.billing import router as billing_router
     from app.routers.websocket import router as websocket_router
@@ -372,6 +373,7 @@ Standardized error responses with codes:
     app.include_router(api_keys_router, prefix=settings.api_v1_prefix)
     app.include_router(billing_router, prefix=settings.api_v1_prefix)
     app.include_router(health_score_router, prefix=settings.api_v1_prefix)
+    app.include_router(analytics_router, prefix=settings.api_v1_prefix)
     # WebSocket router at root level (not under /v1 prefix)
     app.include_router(websocket_router)
 
