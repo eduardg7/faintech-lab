@@ -49,3 +49,21 @@ jobs:
           [ -d "docs" ] && echo "  ✓ docs exists"
           echo ""
           echo "Repository is healthy"
+
+      - name: Secrets detection (TruffleHog)
+        run: |
+          echo "Running secrets detection..."
+          # Install TruffleHog
+          pip install trufflehog
+
+          # Scan for secrets
+          trufflehog filesystem --directory . --json | tee trufflehog-results.json
+
+          # Check if any secrets were found
+          if [ -s trufflehog-results.json ] && [ "$(cat trufflehog-results.json | jq '.FoundResults | length')" -gt 0 ]; then
+            echo "❌ Secrets detected in repository!"
+            cat trufflehog-results.json | jq '.FoundResults[] | {path, strings, reason}'
+            exit 1
+          else
+            echo "✓ No secrets detected"
+          fi
