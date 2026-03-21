@@ -219,10 +219,10 @@ Standardized error responses with codes:
         requests_per_hour=1000,
     )
 
-    # CORS middleware
+    # CORS middleware (TD-009: Environment-specific origins)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
