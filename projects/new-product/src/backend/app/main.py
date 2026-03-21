@@ -18,10 +18,10 @@ app = FastAPI(
 # Add rate limit headers middleware (must be added before rate limiter)
 app.middleware("http")(add_rate_limit_headers)
 
-# Add CORS middleware
+# Add CORS middleware (TD-009: Environment-specific origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -45,5 +45,11 @@ class Settings(BaseSettings):
     # Content limits
     max_content_size_bytes: int = 10 * 1024  # 10KB
 
+    # CORS - Environment-specific origins (TD-009)
+    # Development: ["*"] (wildcard for convenience)
+    # Production: Set ALLOWED_ORIGINS env var with comma-separated domains
+    # Example: ALLOWED_ORIGINS=["https://app.example.com","https://api.example.com"]
+    allowed_origins: list[str] = ["*"]
+
 
 settings = Settings()

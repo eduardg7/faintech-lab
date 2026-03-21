@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # Rate limiting
     rate_limit_per_minute: int = 60
 
+    # CORS - Environment-specific origins (TD-009)
+    # Development: ["*"] (wildcard for convenience)
+    # Production: Specific domains from ALLOWED_ORIGINS env var
+    allowed_origins: list[str] = ["*"]
+
     class Config:
         env_file = ".env"
         case_sensitive = False
