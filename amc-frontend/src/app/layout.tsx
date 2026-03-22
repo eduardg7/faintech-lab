@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
 import SkipLink from "@/components/ui/SkipLink";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,7 +24,9 @@ export default function RootLayout({
         <SkipLink targetId="main-content" />
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <AnalyticsProvider>
+              {children}
+            </AnalyticsProvider>
           </AuthProvider>
         </QueryProvider>
       </body>
