@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { trackUserLogin } from '@/lib/analytics';
 
 interface AuthContextType {
   accessToken: string | null;
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRefreshTokenState(refreshTokenValue);
     localStorage.setItem('amc_access_token', accessTokenValue);
     localStorage.setItem('amc_refresh_token', refreshTokenValue);
+    // Track user login on authentication
+    trackUserLogin('user_from_auth', 'credentials');
   }, []);
 
   // Backward-compatible method for beta LoginForm
@@ -44,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessTokenState(accessTokenValue);
     localStorage.setItem('amc_access_token', accessTokenValue);
     // Note: Refresh token is not set here - user must re-login after 30min expiry
+    // Track login when user authenticates via API key
+    trackUserLogin('user_from_api_key', 'api_key');
   }, []);
 
   const logout = useCallback(() => {
