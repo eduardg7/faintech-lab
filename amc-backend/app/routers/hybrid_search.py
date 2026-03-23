@@ -18,6 +18,7 @@ from app.core.database import get_db
 from app.core.cache import get_cache_service, CacheConfig
 from app.models.memory import Memory
 from app.services.embedding import get_embedding_service
+from app.services.analytics import analytics
 
 
 router = APIRouter(prefix="/search", tags=["Hybrid Search"])
@@ -381,6 +382,14 @@ async def hybrid_search(
                 ))
 
     query_time_ms = (time.perf_counter() - start_time) * 1000
+
+    # Track search execution event
+    analytics.track_search_executed(
+        user_id="api_user",  # Auth context not available on POST endpoint
+        query=q,
+        results_count=len(search_results),
+        search_type="hybrid"
+    )
 
     return HybridSearchResponse(
         results=search_results,

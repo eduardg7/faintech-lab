@@ -13,6 +13,7 @@ from app.core.cache import get_cache_service
 from app.core.jobs import JobQueue, get_job_queue
 from app.models.memory import Memory
 from app.services.embedding import get_embedding_service
+from app.services.analytics import analytics
 
 
 router = APIRouter(prefix="/search", tags=["Semantic Search"])
@@ -158,6 +159,14 @@ async def semantic_search(
 
     # Calculate total time
     query_time_ms = (time.perf_counter() - start_time) * 1000
+
+    # Track search execution event
+    analytics.track_search_executed(
+        user_id="api_user",  # Auth context not available on POST endpoint
+        query=request.query,
+        results_count=len(search_results),
+        search_type="semantic"
+    )
 
     return SemanticSearchResponse(
         results=search_results,

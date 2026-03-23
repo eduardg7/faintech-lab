@@ -32,6 +32,7 @@ from app.schemas.auth import (
     LogoutRequest,
     MessageResponse,
 )
+from app.services.analytics import analytics
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -233,6 +234,13 @@ async def register(
     db.add(refresh_token)
     await db.commit()
 
+    # Track user signup event
+    analytics.track_signup(
+        user_id=user.id,
+        email=user.email,
+        workspace_id=user.workspace_id
+    )
+
     return AuthResponse(
         access_token=access_token,
         refresh_token=refresh_token_str,
@@ -308,6 +316,12 @@ async def login(
     )
     db.add(refresh_token)
     await db.commit()
+
+    # Track user login event
+    analytics.track_user_login(
+        user_id=user.id,
+        auth_method="jwt"
+    )
 
     return AuthResponse(
         access_token=access_token,

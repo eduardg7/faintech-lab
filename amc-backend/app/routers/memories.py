@@ -31,6 +31,7 @@ from app.schemas.memory import (
     MemoryFilter,
     MemoryType,
 )
+from app.services.analytics import analytics
 
 
 router = APIRouter(prefix="/memories", tags=["Memories"])
@@ -87,6 +88,14 @@ async def create_memory(
     db.add(db_memory)
     await db.commit()
     await db.refresh(db_memory)
+
+    # Track memory creation event
+    analytics.track_memory_created(
+        user_id=auth_context.user.id if auth_context.user else "api_user",
+        workspace_id=db_memory.workspace_id,
+        memory_type=db_memory.type,
+        content_length=len(db_memory.content)
+    )
 
     # Convert to response format
     return MemoryResponse(

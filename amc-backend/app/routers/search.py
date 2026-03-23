@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.core.cache import get_cache_service, CacheConfig
 from app.models.memory import Memory
 from app.schemas.memory import MemoryResponse
+from app.services.analytics import analytics
 
 
 router = APIRouter(prefix="/search", tags=["Search"])
@@ -207,6 +208,14 @@ async def keyword_search(
         page=page,
         page_size=page_size,
         results=response.model_dump()
+    )
+
+    # Track search execution event
+    analytics.track_search_executed(
+        user_id="api_user",  # Auth context not available on GET endpoint
+        query=q,
+        results_count=len(search_results),
+        search_type="keyword"
     )
 
     return response
