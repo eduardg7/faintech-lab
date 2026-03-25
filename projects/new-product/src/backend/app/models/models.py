@@ -20,7 +20,7 @@ class Workspace(Base):
     slug = Column(String(100), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     agents = relationship("Agent", back_populates="workspace", cascade="all, delete-orphan")
     api_keys = relationship("ApiKey", back_populates="workspace", cascade="all, delete-orphan")
@@ -38,7 +38,7 @@ class Agent(Base):
     is_active = Column(Boolean, default=True, server_default='1')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     workspace = relationship("Workspace", back_populates="agents")
     memories = relationship("Memory", back_populates="agent", cascade="all, delete-orphan")
@@ -56,7 +56,7 @@ class Memory(Base):
     metadata_json = Column(Text, nullable=True)  # JSON blob for memory metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     agent = relationship("Agent", back_populates="memories")
 
@@ -69,10 +69,12 @@ class ApiKey(Base):
     workspace_id = Column(String, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
     key_hash = Column(String(255), nullable=False, unique=True, index=True)
     name = Column(String(255), nullable=False)  # Human-readable name
+    prefix = Column(String(20), nullable=False)  # First 8 + last 4 chars for display
     is_active = Column(Boolean, default=True, server_default='1')
     last_used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
     revoked_at = Column(DateTime, nullable=True)
-    
+
     # Relationships
     workspace = relationship("Workspace", back_populates="api_keys")

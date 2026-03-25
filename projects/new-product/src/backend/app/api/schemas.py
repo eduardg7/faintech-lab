@@ -120,3 +120,37 @@ class CompactResponse(BaseModel):
     summaries_created: int
     files_archived: int
     message: str
+
+
+# API Key schemas
+class ApiKeyCreate(BaseModel):
+    """Schema for creating an API key."""
+    name: str = Field(..., min_length=1, max_length=255)
+    expires_in_days: Optional[int] = Field(None, ge=1, le=365)
+
+
+class ApiKeyResponse(BaseModel):
+    """Schema for API key response (list view)."""
+    id: str
+    name: str
+    prefix: str
+    created_at: datetime
+    last_used_at: Optional[datetime]
+    expires_at: Optional[datetime]
+    revoked_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class ApiKeyCreateResponse(BaseModel):
+    """Schema for API key creation response (includes secret)."""
+    id: str
+    name: str
+    secret: str  # Full key, only shown once
+    prefix: str
+    created_at: datetime
+    expires_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True

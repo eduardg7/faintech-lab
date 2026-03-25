@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchApiKeys, createApiKey, revokeApiKey } from '../api/mockApi'
+import { fetchApiKeys, createApiKey, revokeApiKey } from '../api/realApi'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 
