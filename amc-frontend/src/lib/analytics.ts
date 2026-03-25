@@ -60,7 +60,7 @@ export function initAnalytics(): void {
   const { posthog } = require('posthog-js');
   posthogInstance = posthog(posthogKey, {
     api_host: posthogHost,
-    loaded: (ph) => {
+    loaded: (ph: any) => {
       posthogInstance = ph;
       console.log('[Analytics] PostHog initialized');
     },
