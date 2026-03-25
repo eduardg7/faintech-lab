@@ -1,6 +1,6 @@
 # PostHog Analytics Setup Guide
 
-**Task:** OS-20260321012826-D979 - Event Tracking for Beta Launch  
+**Task:** OS-20260321012826-D979 - Event Tracking for Beta Launch
 **Last Updated:** 2026-03-23
 
 ## Overview
@@ -31,7 +31,7 @@ POSTHOG_HOST=https://app.posthog.com
 POSTHOG_ENABLED=true
 ```
 
-**Important:** 
+**Important:**
 - Replace `phc_your_actual_api_key_here` with your actual PostHog API key
 - Never commit `.env` file to git (it's in `.gitignore`)
 - Use `.env.example` as template
@@ -69,7 +69,7 @@ The analytics service will:
 
 ✅ **search_executed** - When a search is performed
 - Properties: `user_id`, `query_length`, `results_count`, `search_type`
-- Location: 
+- Location:
   - `GET /search/keyword`
   - `POST /search/hybrid`
   - `POST /search/semantic`

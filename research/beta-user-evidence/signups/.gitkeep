@@ -1,0 +1,24 @@
+# Signup Evidence Directory
+
+This directory contains individual JSON files for each beta signup.
+
+## Structure
+- Each file: `SIGNUP-XXX.json` (sequential numbering)
+- Format: JSON schema defined in `/research/beta-user-evidence/SIGNUP-TRACKING-TEMPLATE.md`
+
+## Usage
+1. Create new file for each signup
+2. Update as new data arrives (surveys, behavior tracking)
+3. Use for aggregation queries and analysis
+
+## Aggregation Examples
+```bash
+# Total signups
+ls -1 SIGNUP-*.json | wc -l
+
+# By source
+cat SIGNUP-*.json | jq -r '.acquisition.source' | sort | uniq -c
+
+# By segment
+cat SIGNUP-*.json | jq -r '.user_data.segment_guess' | sort | uniq -c
+```

@@ -35,9 +35,9 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Service should be enabled
                 assert service.enabled is True
                 assert service._client is not None
@@ -51,21 +51,21 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Track signup
                 result = service.track_signup(
                     user_id='user_123',
                     email='test@example.com',
                     workspace_id='workspace_456'
                 )
-                
+
                 # Verify event was tracked
                 assert result is True
                 # Verify capture was called
                 mock_client.capture.assert_called_once()
-                
+
                 # Verify identify was called
                 mock_client.identify.assert_called_once()
 
@@ -78,15 +78,15 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Track login
                 result = service.track_user_login(
                     user_id='user_123',
                     auth_method='jwt'
                 )
-                
+
                 # Verify event was tracked
                 assert result is True
                 mock_client.capture.assert_called_once()
@@ -100,9 +100,9 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Track memory creation
                 result = service.track_memory_created(
                     user_id='user_123',
@@ -110,7 +110,7 @@ class TestAnalyticsService:
                     memory_type='outcome',
                     content_length=500
                 )
-                
+
                 # Verify event was tracked
                 assert result is True
                 mock_client.capture.assert_called_once()
@@ -124,9 +124,9 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Track search execution
                 result = service.track_search_executed(
                     user_id='user_123',
@@ -134,7 +134,7 @@ class TestAnalyticsService:
                     results_count=10,
                     search_type='keyword'
                 )
-                
+
                 # Verify event was tracked
                 assert result is True
                 mock_client.capture.assert_called_once()
@@ -143,13 +143,13 @@ class TestAnalyticsService:
         """Test that events are logged but not sent when PostHog is disabled."""
         with patch.dict('os.environ', {}, clear=True):
             service = AnalyticsService()
-            
+
             # Try to track event
             result = service.track_signup(
                 user_id='user_123',
                 email='test@example.com'
             )
-            
+
             # Should return False (not tracked)
             assert result is False
 
@@ -162,26 +162,26 @@ class TestAnalyticsService:
             with patch('app.services.analytics.Posthog') as mock_posthog:
                 mock_client = MagicMock()
                 mock_posthog.return_value = mock_client
-                
+
                 service = AnalyticsService()
-                
+
                 # Track signup
                 service.track_signup(
                     user_id='user_123',
                     email='test@example.com',
                     workspace_id='workspace_456'
                 )
-                
+
                 # Verify capture was called with correct properties
                 call_args = mock_client.capture.call_args
                 assert call_args is not None
-                
+
                 # Verify distinct_id
                 assert call_args[1]['distinct_id'] == 'user_123'
-                
+
                 # Verify event name
                 assert call_args[1]['event'] == 'user_signup'
-                
+
                 # Verify properties include workspace_id
                 properties = call_args[1]['properties']
                 assert properties['workspace_id'] == 'workspace_456'

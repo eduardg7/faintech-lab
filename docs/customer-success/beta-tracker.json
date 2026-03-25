@@ -1,0 +1,90 @@
+{
+  "beta_start": "2026-03-24T00:00:00Z",
+  "beta_end": "2026-03-31T23:59:59Z",
+  "users": [
+    {
+      "email": "user1@example.com",
+      "name": "Beta User 1",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user2@example.com",
+      "name": "Beta User 2",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user3@example.com",
+      "name": "Beta User 3",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user4@example.com",
+      "name": "Beta User 4",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user5@example.com",
+      "name": "Beta User 5",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user6@example.com",
+      "name": "Beta User 6",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user7@example.com",
+      "name": "Beta User 7",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    },
+    {
+      "email": "user8@example.com",
+      "name": "Beta User 8",
+      "invited_at": null,
+      "first_session_at": null,
+      "status": "pending_invitation",
+      "health_score": null,
+      "daily_metrics": []
+    }
+  ],
+  "aggregated_metrics": {
+    "total_invited": 0,
+    "total_active": 0,
+    "total_memories_created": 0,
+    "avg_sessions_per_week": 0,
+    "error_count": 0
+  },
+  "health_distribution": {
+    "green": 0,
+    "yellow": 0,
+    "red": 0
+  }
+}

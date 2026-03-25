@@ -1,0 +1,139 @@
+{
+  "snapshot_id": "metrics-snapshot-day2",
+  "date": "2026-03-25",
+  "snapshot_time_utc": "2026-03-24T23:31:00.000Z",
+  "snapshot_time_eet": "2026-03-25T01:31:00.000Z",
+  "hours_post_launch": 49,
+  "days_post_launch": 2,
+
+  "organic_metrics": {
+    "github_issue_90": {
+      "views": 47,
+      "unique_viewers": 3,
+      "reactions": 0,
+      "comments": 0,
+      "stars": 0,
+      "published_at": "2026-03-20T10:53:00.000Z",
+      "age_hours": 125
+    },
+    "hn_status": {
+      "submitted": false,
+      "rank": null,
+      "comments": 0,
+      "signups": 0,
+      "reason": "Deferred - AMC-FIX-001 unresolved"
+    },
+    "visitor_count": "UNKNOWN",
+    "visitor_source": "PostHog analytics dashboard INACCESSIBLE"
+  },
+
+  "signups": {
+    "total_signups_posthog": 0,
+    "new_signups_day2": 0,
+    "cumulative_signups": 0,
+    "active_users": 0,
+    "source": "PostHog event tracking (confirmed via data/gtm/metrics-snapshot-24h.json)"
+  },
+
+  "social_media": {
+    "linkedin": {
+      "status": "UNKNOWN",
+      "posts_live": false,
+      "impressions": 0,
+      "reactions": 0,
+      "comments": 0,
+      "evidence": "No evidence of live LinkedIn posts found"
+    },
+    "twitter": {
+      "status": "BLOCKED",
+      "posts_live": false,
+      "impressions": 0,
+      "replies": 0,
+      "retweets": 0,
+      "evidence": "CEO decision pending (CMO escalated 4x)",
+      "blocker": "Awaiting authorization from CEO"
+    }
+  },
+
+  "technical_health": {
+    "platform_stability": "GREEN",
+    "error_rate": "No spikes detected",
+    "api_response_time": "Baseline normal",
+    "critical_bugs": 0
+  },
+
+  "performance_vs_targets": {
+    "visitors": {
+      "target": "50+",
+      "actual": "UNKNOWN",
+      "variance": "UNKNOWN - analytics inaccessible",
+      "status": "CANNOT VERIFY"
+    },
+    "signups": {
+      "target_minimum": "5",
+      "target_good": "10",
+      "target_excellent": "20",
+      "actual": 0,
+      "variance_pct": -100,
+      "status": "BELOW_MINIMUM"
+    },
+    "github_comments": {
+      "target": "10+",
+      "actual": 0,
+      "variance_pct": -100,
+      "status": "BELOW_TARGET"
+    },
+    "linkedin_impressions": {
+      "target": "500+",
+      "actual": 0,
+      "variance_pct": -100,
+      "status": "BELOW_TARGET - execution status unknown"
+    },
+    "twitter_impressions": {
+      "target": "200+",
+      "actual": 0,
+      "variance_pct": -100,
+      "status": "BELOW_TARGET - execution blocked"
+    },
+    "hn_signups": {
+      "target": "50+",
+      "actual": 0,
+      "variance_pct": -100,
+      "status": "BELOW_TARGET - HN not submitted yet"
+    }
+  },
+
+  "data_gaps": [
+    "Analytics dashboard access blocked - visitor count unverified",
+    "LinkedIn post execution status unknown - no evidence of live posts",
+    "Twitter outreach blocked pending CEO decision - CMO escalated 4x"
+  ],
+
+  "key_insights": [
+    "Day 2 performance: CRITICAL - still 0 signups at T+49h",
+    "Execution gap persists from Day 1 - social media posts not confirmed live",
+    "GitHub Issue #90 organic engagement minimal after 125h - 0 reactions, 0 comments",
+    "Root cause confirmed: EXECUTION GAP (not PMF failure) per research-lead findings",
+    "Analytics access remains blocker for visitor metrics - unblocks AC1 (analytics) task"
+  ],
+
+  "escalation_status": {
+    "ceo_escalation_triggered": true,
+    "escalation_deadline": "2026-03-24T22:00:00.000Z (PASSED - now 01:31 EET Day 2)",
+    "escalation_doc": "data/gtm/day1-escalation-to-ceo.md",
+    "status": "ESCALATED - awaiting CEO decisions on 5 priority items"
+  },
+
+  "next_actions": {
+    "continue_week1_data_collection": true,
+    "next_snapshot_due": "2026-03-25T21:00:00.000Z EET (Day 3, T+72h)",
+    "ac4_blocking": "AC4 logically blocked until Mar 31+ (Week 2) when AC1/AC2/AC3 data is synthesized"
+  },
+
+  "evidence_sources": [
+    "PostHog (via Day 1 24h snapshot)",
+    "GitHub Issue #90 manual verification",
+    "SESSION-STATE.md",
+    "DAILY-CONTEXT.md"
+  ]
+}
