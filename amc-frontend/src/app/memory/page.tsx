@@ -27,7 +27,6 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <>
-      <StructuredData />
       <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
