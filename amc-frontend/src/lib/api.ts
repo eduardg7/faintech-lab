@@ -196,6 +196,8 @@ export const api = {
       tags?: string;
       since?: string;
       until?: string;
+      date_from?: string;
+      date_to?: string;
       limit?: number;
       offset?: number;
     }
@@ -209,6 +211,8 @@ export const api = {
         project_id: params?.project_id,
         memory_type: params?.type,
         tag: params?.tags,
+        since: params?.since || params?.date_from,
+        until: params?.until || params?.date_to,
         page,
         page_size: pageSize,
       },
