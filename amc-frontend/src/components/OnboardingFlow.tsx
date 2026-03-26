@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackEvent, trackUserSignup, ANALYTICS_EVENTS } from '@/lib/analytics';
 
 type StepId = 'welcome' | 'workspace' | 'api-key' | 'first-memory' | 'success';
 
@@ -20,6 +21,17 @@ export default function OnboardingFlow() {
   const currentIndex = steps.indexOf(step);
   const progress = ((currentIndex + 1) / steps.length) * 100;
 
+  // Track onboarding started on first mount
+  useEffect(() => {
+    const hasStartedOnboarding = sessionStorage.getItem('amc_onboarding_started');
+    if (!hasStartedOnboarding) {
+      trackEvent('onboarding_started' as any, {
+        timestamp: new Date().toISOString(),
+      });
+      sessionStorage.setItem('amc_onboarding_started', 'true');
+    }
+  }, []);
+
   const generatedPreviewKey = useMemo(() => {
     const slug = workspaceName
       .trim()
@@ -33,6 +45,19 @@ export default function OnboardingFlow() {
   const goToStep = (nextStep: StepId) => {
     setError('');
     setCopied(false);
+
+    // Track step completion if moving forward
+    const nextIndex = steps.indexOf(nextStep);
+    if (nextIndex > currentIndex) {
+      trackEvent('onboarding_step_completed' as any, {
+        step: nextStep,
+        step_number: nextIndex + 1,
+        total_steps: steps.length,
+        progress_percent: Math.round(((nextIndex + 1) / steps.length) * 100),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     setStep(nextStep);
   };
 
@@ -76,6 +101,17 @@ export default function OnboardingFlow() {
     const trimmedWorkspace = workspaceName.trim();
     const trimmedMemory = memoryDraft.trim();
     const trimmedKey = key.trim();
+
+    // Track onboarding completion (signup)
+    const userId = `user_${Date.now()}`;
+    trackUserSignup(userId, undefined);
+
+    // Track final step completion
+    trackEvent('onboarding_completed' as any, {
+      workspace_name: trimmedWorkspace,
+      has_custom_memory: trimmedMemory !== defaultMemory,
+      timestamp: new Date().toISOString(),
+    });
 
     localStorage.setItem('amc_onboarding_completed', 'true');
     localStorage.setItem('amc_workspace_name', trimmedWorkspace);
