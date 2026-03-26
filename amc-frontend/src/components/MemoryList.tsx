@@ -15,6 +15,9 @@ export default function MemoryList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut: Cmd/Ctrl+K to focus search
@@ -32,11 +35,14 @@ export default function MemoryList() {
 
   // Fetch memories
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['memories', selectedType, selectedAgent],
+    queryKey: ['memories', selectedType, selectedAgent, selectedProject, dateFrom, dateTo],
     queryFn: () =>
       api.getMemories(accessToken!, {
         type: selectedType || undefined,
         agent_id: selectedAgent || undefined,
+        project_id: selectedProject || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
         limit: 50,
       }),
     enabled: !!accessToken,
@@ -75,7 +81,7 @@ export default function MemoryList() {
   };
 
   const memories = searchQuery ? searchData?.results.map((r) => r.memory) : data?.memories;
-  const hasActiveFilters = searchQuery || selectedType || selectedAgent;
+  const hasActiveFilters = searchQuery || selectedType || selectedAgent || selectedProject || dateFrom || dateTo;
 
   // Calculate dashboard stats
   const stats = useMemo(() => {
@@ -107,6 +113,9 @@ export default function MemoryList() {
   const clearFilters = () => {
     setSelectedType('');
     setSelectedAgent('');
+    setSelectedProject('');
+    setDateFrom('');
+    setDateTo('');
     setSearchQuery('');
   };
 
@@ -244,6 +253,43 @@ export default function MemoryList() {
             onChange={(e) => setSelectedAgent(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
             aria-label="Filter by agent ID"
+          />
+
+          <label htmlFor="project-filter" className="sr-only">
+            Filter by project ID
+          </label>
+          <input
+            id="project-filter"
+            type="text"
+            placeholder="Filter by project"
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+            aria-label="Filter by project ID"
+          />
+
+          <label htmlFor="date-from-filter" className="sr-only">
+            Filter from date
+          </label>
+          <input
+            id="date-from-filter"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+            aria-label="Filter from date"
+          />
+
+          <label htmlFor="date-to-filter" className="sr-only">
+            Filter to date
+          </label>
+          <input
+            id="date-to-filter"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+            aria-label="Filter to date"
           />
 
           <button
