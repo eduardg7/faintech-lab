@@ -268,29 +268,31 @@ export default function MemoryList() {
             aria-label="Filter by project ID"
           />
 
-          <label htmlFor="date-from-filter" className="sr-only">
-            Filter from date
-          </label>
-          <input
-            id="date-from-filter"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
-            aria-label="Filter from date"
-          />
-
-          <label htmlFor="date-to-filter" className="sr-only">
-            Filter to date
-          </label>
-          <input
-            id="date-to-filter"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
-            aria-label="Filter to date"
-          />
+          <div className="flex items-center gap-2">
+            <label htmlFor="date-from-filter" className="text-sm text-gray-600">
+              From
+            </label>
+            <input
+              id="date-from-filter"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+              aria-label="Date from"
+            />
+            <span className="text-gray-400">–</span>
+            <label htmlFor="date-to-filter" className="text-sm text-gray-600">
+              To
+            </label>
+            <input
+              id="date-to-filter"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amc-primary focus:outline-none"
+              aria-label="Date to"
+            />
+          </div>
 
           <button
             onClick={clearFilters}
