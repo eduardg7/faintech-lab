@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   statsApi,
   mockMemoryStats,
@@ -123,6 +124,13 @@ export default function DashboardPage() {
               >
                 Memory List
               </a>
+              <Link
+                href="/dashboard/api-keys"
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary rounded transition-colors"
+                aria-label="Manage API Keys"
+              >
+                API Keys
+              </Link>
               <button
                 onClick={logout}
                 className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amc-primary rounded transition-colors"
