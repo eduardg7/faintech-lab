@@ -22,7 +22,8 @@ export const db = {
   apiKey: {
     count: async ({ where }: { where: { userId: string } }) => {
       let count = 0;
-      for (const key of apiKeyStore.values()) {
+      // Use Array.from to convert MapIterator to array for ES2015 compatibility
+      for (const key of Array.from(apiKeyStore.values())) {
         if (key.userId === where.userId && !key.revoked) {
           count++;
         }
@@ -56,7 +57,7 @@ export const db = {
       orderBy?: { createdAt: 'desc' | 'asc' };
     }) => {
       const results = [];
-      for (const key of apiKeyStore.values()) {
+      for (const key of Array.from(apiKeyStore.values())) {
         if (key.userId === where.userId && !key.revoked) {
           if (select) {
             const selected: Record<string, unknown> = {};
