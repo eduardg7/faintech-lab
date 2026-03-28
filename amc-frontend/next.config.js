@@ -3,7 +3,8 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'export',
   trailingSlash: true,
-  basePath: '/faintech-lab',
+  // basePath removed - using custom domain faintech-lab.com on Vercel
+  // For GitHub Pages deployment, use: basePath: '/faintech-lab'
   images: {
     unoptimized: true
   }

@@ -1,0 +1,47 @@
+{
+  "id": "LAB-TRACKING-ACTIVATION-001",
+  "task_id": "LAB-TRACKING-ACTIVATION-001",
+  "title": "[LAB] P1: Implement PostHog activation funnel tracking",
+  "description": "Implement comprehensive activation tracking using PostHog to measure user onboarding success and identify drop-off points. This is foundational for Week 2 product optimization hypothesis validation. Current gap: No activation tracking exists, making it impossible to measure product quality or optimize onboarding. Target: Achieve 60%+ 24h activation rate by Week 4.",
+  "area": "product",
+  "severity": "P1",
+  "status": "todo",
+  "owner": "faintech-backend",
+  "next_owner": "cpo",
+  "acceptance_criteria": [
+    "PostHog event tracking implemented for all activation funnel steps: signup_completed, onboarding_started, first_memory_created, first_memory_viewed, feature_discovered",
+    "Activation funnel dashboard created in PostHog with conversion rates at each step",
+    "Automated daily report configured to send to #product Slack channel",
+    "Real-time alert configured for activation rate <50%",
+    "Server-side and client-side tracking implemented (privacy-compliant with GDPR consent)",
+    "Test coverage for all tracking events (unit + integration tests)",
+    "Documentation updated with event schema and tracking implementation guide",
+    "CPO verification that dashboard shows accurate data with test users"
+  ],
+  "evidence": [],
+  "activity_log": [
+    "2026-03-28T05:20:00.000Z [cpo] Task created: Activation tracking implementation for Week 2 product optimization hypothesis"
+  ],
+  "metadata": {
+    "project_id": "faintech-lab",
+    "goal_id": "goal-amc-mvp-launch",
+    "source": "product_strategy",
+    "work_type": "implementation",
+    "readiness_score": 85,
+    "readiness_assessed_at": "2026-03-28T05:20:00.000Z",
+    "git_guardrails_required": true,
+    "urgent": false,
+    "blocked_reason": "",
+    "dependencies": [
+      "HUNTER_API_KEY deployment (for user data collection)",
+      "PostHog project configuration",
+      "GDPR consent integration"
+    ],
+    "estimated_effort": "2-3 days",
+    "business_impact": "High - enables product quality measurement and optimization",
+    "hypothesis_ref": "PRODUCT-HYPOTHESIS-WE2.md"
+  },
+  "created": "2026-03-28T05:20:00.000Z",
+  "updated": "2026-03-28T05:20:00.000Z",
+  "blocked_reason": ""
+}
