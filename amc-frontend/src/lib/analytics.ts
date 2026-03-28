@@ -19,12 +19,19 @@ let posthogInstance: PostHog | null = null;
 
 // Event names
 export const ANALYTICS_EVENTS = {
+  // Core user events
   USER_SIGNUP: 'user_signup',
   EMAIL_VERIFIED: 'email_verified',
   AGENT_CREATED: 'agent_created',
   MEMORY_CREATED: 'memory_created',
   SEARCH_EXECUTED: 'search_executed',
   USER_LOGIN: 'user_login',
+  // Activation funnel events (Task: LAB-TRACKING-ACTIVATION-001)
+  SIGNUP_COMPLETED: 'signup_completed',
+  ONBOARDING_STARTED: 'onboarding_started',
+  FIRST_MEMORY_CREATED: 'first_memory_created',
+  FIRST_MEMORY_VIEWED: 'first_memory_viewed',
+  FEATURE_DISCOVERED: 'feature_discovered',
 } as const;
 
 export type AnalyticsEvent = typeof ANALYTICS_EVENTS[keyof typeof ANALYTICS_EVENTS];
@@ -160,6 +167,100 @@ export function trackUserLogin(userId: string, method?: string): void {
   trackEvent(ANALYTICS_EVENTS.USER_LOGIN, {
     user_id: userId,
     login_method: method,
+  });
+}
+
+// ============================================================================
+// Activation Funnel Tracking (Task: LAB-TRACKING-ACTIVATION-001)
+// ============================================================================
+
+export interface ActivationFunnelProperties {
+  user_id: string;
+  session_id?: string;
+  step_number?: number;
+  time_since_signup_ms?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Track signup completion - user has successfully created account
+ * This is the top of the activation funnel
+ */
+export function trackSignupCompleted(
+  userId: string,
+  properties?: { email?: string; signup_method?: string }
+): void {
+  trackEvent(ANALYTICS_EVENTS.SIGNUP_COMPLETED, {
+    user_id: userId,
+    step_number: 1,
+    ...properties,
+  });
+}
+
+/**
+ * Track onboarding started - user has begun the onboarding flow
+ */
+export function trackOnboardingStarted(
+  userId: string,
+  properties?: { onboarding_version?: string }
+): void {
+  trackEvent(ANALYTICS_EVENTS.ONBOARDING_STARTED, {
+    user_id: userId,
+    step_number: 2,
+    ...properties,
+  });
+}
+
+/**
+ * Track first memory creation - critical activation milestone
+ * This is the key metric for measuring user activation
+ */
+export function trackFirstMemoryCreated(
+  userId: string,
+  properties?: {
+    memory_id?: string;
+    memory_type?: string;
+    time_since_signup_ms?: number;
+  }
+): void {
+  trackEvent(ANALYTICS_EVENTS.FIRST_MEMORY_CREATED, {
+    user_id: userId,
+    step_number: 3,
+    ...properties,
+  });
+}
+
+/**
+ * Track first memory view - user has viewed their first stored memory
+ */
+export function trackFirstMemoryViewed(
+  userId: string,
+  properties?: {
+    memory_id?: string;
+    time_since_signup_ms?: number;
+  }
+): void {
+  trackEvent(ANALYTICS_EVENTS.FIRST_MEMORY_VIEWED, {
+    user_id: userId,
+    step_number: 4,
+    ...properties,
+  });
+}
+
+/**
+ * Track feature discovery - user has discovered a new feature
+ */
+export function trackFeatureDiscovered(
+  userId: string,
+  properties: {
+    feature_name: string;
+    discovery_context?: string;
+  }
+): void {
+  trackEvent(ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
+    user_id: userId,
+    step_number: 5,
+    ...properties,
   });
 }
 
