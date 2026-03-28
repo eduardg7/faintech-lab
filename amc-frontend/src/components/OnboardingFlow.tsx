@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { trackEvent, trackUserSignup, ANALYTICS_EVENTS } from '@/lib/analytics';
+import {
+  trackOnboardingStarted,
+  trackSignupCompleted,
+  trackFirstMemoryCreated,
+  trackEvent,
+} from '@/lib/analytics';
 
 type StepId = 'welcome' | 'workspace' | 'api-key' | 'first-memory' | 'success';
 
@@ -25,10 +30,11 @@ export default function OnboardingFlow() {
   useEffect(() => {
     const hasStartedOnboarding = sessionStorage.getItem('amc_onboarding_started');
     if (!hasStartedOnboarding) {
-      trackEvent('onboarding_started' as any, {
-        timestamp: new Date().toISOString(),
-      });
+      // Generate a temporary user ID for tracking purposes
+      const tempUserId = `temp_user_${Date.now()}`;
+      trackOnboardingStarted(tempUserId, { onboarding_version: 'v1' });
       sessionStorage.setItem('amc_onboarding_started', 'true');
+      sessionStorage.setItem('amc_temp_user_id', tempUserId);
     }
   }, []);
 
@@ -102,9 +108,17 @@ export default function OnboardingFlow() {
     const trimmedMemory = memoryDraft.trim();
     const trimmedKey = key.trim();
 
-    // Track onboarding completion (signup)
-    const userId = `user_${Date.now()}`;
-    trackUserSignup(userId, undefined);
+    // Get or generate user ID for tracking
+    const userId = sessionStorage.getItem('amc_temp_user_id') || `user_${Date.now()}`;
+
+    // Track signup completion (activation funnel step 1)
+    trackSignupCompleted(userId);
+
+    // Track first memory creation (activation funnel step 3)
+    trackFirstMemoryCreated(userId, {
+      memory_id: `memory_${Date.now()}`,
+      memory_type: 'onboarding_draft',
+    });
 
     // Track final step completion
     trackEvent('onboarding_completed' as any, {
