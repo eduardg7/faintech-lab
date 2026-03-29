@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Faintech Lab',
     images: [
       {
-        url: 'https://faintech-lab.com/thumbnail.png',
+        url: 'https://faintech-lab.com/amc-demo-thumbnail.png',
         width: 1200,
         height: 630,
         alt: 'Faintech Lab - Agent Memory Cloud',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     title: 'Faintech Lab | Agent Memory Cloud',
     description: 'Persistent memory for AI agents and autonomous workflows. Never lose agent state again.',
     creator: '@faintechlab',
-    images: ['https://faintech-lab.com/thumbnail.png'],
+    images: ['https://faintech-lab.com/amc-demo-thumbnail.png'],
   },
   metadataBase: new URL('https://faintech-lab.com'),
   alternates: {
