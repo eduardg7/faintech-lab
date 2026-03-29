@@ -126,18 +126,21 @@ export default function LoginForm() {
           </div>
         </header>
 
-        <main id="main-content" className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr]">
-          <section className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-3">
-              {productScreens.map((screen) => (
+        <main id="main-content" className="grid gap-8 lg:grid-cols-[1.35fr_0.9fr]" role="main">
+          <section className="space-y-8" aria-label="Product information and beta signup">
+            <div className="grid gap-4 md:grid-cols-3" role="list" aria-label="Product features">
+              {productScreens.map((screen, index) => (
                 <article
                   key={screen.title}
-                  className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-xl shadow-slate-950/20"
+                  tabIndex={0}
+                  role="listitem"
+                  aria-labelledby={`product-title-${index}`}
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-xl shadow-slate-950/20 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-950 transition-all duration-200"
                 >
-                  <div className={`h-28 bg-gradient-to-br ${screen.accent}`} />
+                  <div className={`h-28 bg-gradient-to-br ${screen.accent}`} aria-hidden="true" />
                   <div className="space-y-3 p-5">
                     <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-300">Product preview</p>
-                    <h2 className="text-lg font-semibold text-white">{screen.title}</h2>
+                    <h2 id={`product-title-${index}`} className="text-lg font-semibold text-white">{screen.title}</h2>
                     <p className="text-sm leading-6 text-slate-300">{screen.description}</p>
                   </div>
                 </article>
@@ -212,7 +215,7 @@ export default function LoginForm() {
               </div>
 
               {signupError ? (
-                <p className="mt-3 text-sm text-rose-200" role="alert">
+                <p className="mt-3 text-sm text-rose-200" role="alert" aria-live="polite">
                   {signupError}
                 </p>
               ) : (
@@ -226,6 +229,7 @@ export default function LoginForm() {
           <aside
             id="dashboard-access"
             className="rounded-3xl border border-white/10 bg-white p-6 text-slate-900 shadow-2xl shadow-slate-950/30"
+            aria-label="Dashboard login for existing customers"
           >
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">Dashboard access</p>
