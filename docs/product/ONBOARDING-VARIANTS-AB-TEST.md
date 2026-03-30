@@ -424,11 +424,11 @@ import { usePostHog } from 'posthog-js/react';
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const posthog = usePostHog();
-  
+
   if (!isAuthenticated) {
     // Get variant from PostHog feature flag
     const variant = posthog.getFeatureFlag('onboarding-variant');
-    
+
     if (variant === 'simplified') {
       return <OnboardingFlowSimplified />;
     } else if (variant === 'guided') {
@@ -437,7 +437,7 @@ export default function Home() {
       return <OnboardingFlow />; // Control (default)
     }
   }
-  
+
   // ... rest of component
 }
 ```

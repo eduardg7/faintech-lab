@@ -11,9 +11,9 @@
 
 This dashboard provides real-time tracking of Week 1 GTM execution success metrics. It directly connects to the Revenue Attribution Framework and updates daily based on channel performance and conversion data.
 
-**Current Status:** PRE-DISTRIBUTION (All channels blocked)  
-**Last Updated:** 2026-03-27T23:08:24Z  
-**Next Update:** 2026-03-28T23:00:00Z  
+**Current Status:** PRE-DISTRIBUTION (All channels blocked)
+**Last Updated:** 2026-03-27T23:08:24Z
+**Next Update:** 2026-03-28T23:00:00Z
 
 ---
 
@@ -43,7 +43,7 @@ This dashboard provides real-time tracking of Week 1 GTM execution success metri
 
 ### Channel Success Thresholds
 - ✅ **SUCCESS:** ≥4% conversion (5+ signups from 125+ visitors)
-- ⚠️ **WEAK:** 2-3% conversion (2-3 signups from 100+ visitors)  
+- ⚠️ **WEAK:** 2-3% conversion (2-3 signups from 100+ visitors)
 - ❌ **FAIL:** <2% conversion (0-1 signups from 100+ visitors)
 
 ---
@@ -243,9 +243,9 @@ Response: {
 
 ---
 
-**Dashboard Version:** 1.0  
-**Framework Link:** [Revenue Attribution Framework](../analytics/revenue-attribution-framework.md)  
-**Last Updated:** 2026-03-27T23:08:24Z  
+**Dashboard Version:** 1.0
+**Framework Link:** [Revenue Attribution Framework](../analytics/revenue-attribution-framework.md)
+**Last Updated:** 2026-03-27T23:08:24Z
 **Next Auto-Update:** 2026-03-28T23:00:00Z
 
 ---

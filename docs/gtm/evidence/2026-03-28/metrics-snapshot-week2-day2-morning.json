@@ -3,7 +3,7 @@
   "day": "Week 2 Day 2 - Saturday Morning",
   "post_launch_hours": 111,
   "launch_date": "2026-03-24T15:00:00.000Z",
-  
+
   "github_issue_90": {
     "number": 90,
     "title": "📢 What It Looks Like to Build an Agent Memory Product in Public",
@@ -15,7 +15,7 @@
     "reactions": 0,
     "engagement": "NONE"
   },
-  
+
   "user_metrics": {
     "signups": 0,
     "target_minimum": 5,
@@ -23,7 +23,7 @@
     "conversations": 0,
     "impressions": 0
   },
-  
+
   "distribution_channels": {
     "twitter": {
       "status": "BLOCKED",
@@ -47,14 +47,14 @@
       "activation": "Manual GTM fallback available"
     }
   },
-  
+
   "revenue_impact": {
     "daily_burn": 3.33,
     "total_lost_since_launch": 79.92,
     "y1_exposure": 1200,
     "currency": "EUR"
   },
-  
+
   "blockers": {
     "primary": {
       "id": "HUNTER_API_KEY_VALUE",
@@ -73,14 +73,14 @@
       "status": "investigating"
     }
   },
-  
+
   "product_health": {
     "tests_passing": 2311,
     "tests_total": 2311,
     "open_prs": 0,
     "status": "GREEN"
   },
-  
+
   "researcher_status": {
     "active_task": "MONITOR-GITHUB-ISSUE-90",
     "cycle_status": "HEARTBEAT_OK",

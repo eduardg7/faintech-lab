@@ -21,7 +21,7 @@
 - All API endpoints functional
 - Platform uptime: 100% (no critical incidents)
 
-**Business Impact:** 
+**Business Impact:**
 - Opportunity cost accumulating: T+82h × €12k-40k Y1 revenue potential
 - Post-launch momentum window narrowing rapidly
 

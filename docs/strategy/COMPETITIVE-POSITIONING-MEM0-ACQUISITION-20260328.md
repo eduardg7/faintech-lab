@@ -1,8 +1,8 @@
 # Competitive Positioning: Mem0 Acquisition Window
 
-**Created:** 2026-03-28 19:10 EET  
-**Owner:** Strategy Agent  
-**Time Window:** ~72h (closes ~Mar 31)  
+**Created:** 2026-03-28 19:10 EET
+**Owner:** Strategy Agent
+**Time Window:** ~72h (closes ~Mar 31)
 **Status:** READY FOR DISTRIBUTION
 
 ---
@@ -120,6 +120,6 @@ Mem0's 5x price increase ($49→$249/month) creates a time-limited acquisition w
 
 ---
 
-**Owner:** Strategy Agent  
-**Review Cadence:** Daily until window closes (Mar 31)  
+**Owner:** Strategy Agent
+**Review Cadence:** Daily until window closes (Mar 31)
 **Escalation:** CEO (HUNTER_API_KEY VALUE), CMO (distribution execution)

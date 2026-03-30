@@ -6,7 +6,7 @@
 ## Dashboard Purpose
 Track HN launch performance to:
 - Qualify Week 2 partnership prospects based on conversion quality
-- Measure channel effectiveness against 4%+ success threshold  
+- Measure channel effectiveness against 4%+ success threshold
 - Provide governance team with data for Twitter/LinkedIn priority decisions
 
 ## Success Metrics
@@ -53,7 +53,7 @@ Track HN launch performance to:
 - **Outreach Timeline:** Week 2 (April 8-14)
 - **Focus:** Co-marketing, technical case studies
 
-#### Tier B: Moderate HN Success (3-4 signups, 4-5% CTR)  
+#### Tier B: Moderate HN Success (3-4 signups, 4-5% CTR)
 - **Partnership Type:** Content partnerships, distribution channels
 - **Outreach Timeline:** Week 3 (April 15-21)
 - **Focus:** Guest posts, webinar collaborations

@@ -29,7 +29,7 @@ function generatePreFilledQuery(lastMemory: Memory): string {
     `What did I store about ${extractTopic(lastMemory)}?`,
     `Show me information about ${extractTopic(lastMemory)}`
   ];
-  
+
   // Rotate through templates to avoid repetition
   return templates[Math.floor(Math.random() * templates.length)];
 }
@@ -40,7 +40,7 @@ function extractTopic(memory: Memory): string {
   // "I prefer dark mode for coding" → "coding"
   // "Remember to use TypeScript strict mode" → "TypeScript"
   // "My API key is stored in .env" → "API key"
-  
+
   // Implementation: Use simple NLP (extract first noun phrase after "my/I/our")
   // If extraction fails, use "my work" as generic fallback
   const topic = extractNounPhrase(memory.content);
@@ -77,7 +77,7 @@ Display results
 ```typescript
 const handleSuggestionClick = (memory: Memory) => {
   setSearchQuery(memory.content.substring(0, 50));
-  
+
   // Delay to show field population before search
   setTimeout(() => {
     executeSearch(memory.content.substring(0, 50));
@@ -107,7 +107,7 @@ interface SearchResponse {
 function calculateConfidence(query: string, result: Memory): number {
   const queryEmbedding = await getEmbedding(query);
   const memoryEmbedding = await getEmbedding(result.content);
-  
+
   // Cosine similarity (0-1) converted to percentage
   const similarity = cosineSimilarity(queryEmbedding, memoryEmbedding);
   return Math.round(similarity * 100);
@@ -163,7 +163,7 @@ User can: (1) Try suggested query, (2) Clear search, (3) Skip step
   <Icon name="search-x" className="text-gray-400 w-12 h-12" />
   <Title>No matches found</Title>
   <Subtitle>Try one of these:</Subtitle>
-  
+
   <SuggestionList>
     <Suggestion onClick={() => setSearch("What did I store?")}>
       "What did I store?"
@@ -175,7 +175,7 @@ User can: (1) Try suggested query, (2) Clear search, (3) Skip step
       "What are my {lastMemoryTopic} preferences?"
     </Suggestion>
   </SuggestionList>
-  
+
   <Actions>
     <Button variant="secondary" onClick={clearSearch}>Clear search</Button>
     <Button variant="ghost" onClick={skipStep}>Skip for now</Button>
@@ -257,7 +257,7 @@ enum SearchError {
   <Icon name={getErrorIcon(error)} className="text-red-500 w-12 h-12" />
   <Title>{getErrorTitle(error)}</Title>
   <Message>{getErrorMessage(error)}</Message>
-  
+
   <Actions>
     {error === SearchError.API_DOWN && (
       <Button onClick={retrySearch}>Try again</Button>
