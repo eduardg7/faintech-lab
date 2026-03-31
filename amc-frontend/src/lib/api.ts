@@ -25,7 +25,9 @@ axiosRetry(apiClient, {
     );
   },
   onRetry: (retryCount: number, error: any, requestConfig: any) => {
-    console.log(`Retry attempt ${retryCount} for ${requestConfig.url}:`, error.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Retry attempt ${retryCount} for ${requestConfig.url}:`, error.message);
+    }
   },
 });
 
