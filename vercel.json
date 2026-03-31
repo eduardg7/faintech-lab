@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd amc-frontend && npm install && npm run build",
   "installCommand": "npm install",
-  "framework": "nextjs",
+  "framework": null,
   "regions": ["fra1"],
   "headers": [
     {
