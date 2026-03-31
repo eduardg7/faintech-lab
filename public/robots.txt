@@ -1,0 +1,14 @@
+# Robots.txt for Faintech Lab
+# Allow all crawlers to access all pages
+User-agent: *
+Allow: /
+
+# Crawl-delay to prevent server overload (optional, but good practice)
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://faintech-lab.vercel.app/sitemap.xml
+
+# Disallow specific paths (if needed in future)
+# Disallow: /admin/
+# Disallow: /api/
