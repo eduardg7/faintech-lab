@@ -53,13 +53,17 @@ export function initAnalytics(): void {
   const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
 
   if (!posthogKey) {
-    console.warn('[Analytics] PostHog key not configured. Analytics disabled.');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Analytics] PostHog key not configured. Analytics disabled.');
+    }
     return;
   }
 
   // Dynamic import for PostHog
   if (posthogInstance) {
-    console.warn('[Analytics] Already initialized');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Analytics] Already initialized');
+    }
     return;
   }
 
@@ -69,7 +73,9 @@ export function initAnalytics(): void {
     api_host: posthogHost,
     loaded: (ph: any) => {
       posthogInstance = ph;
-      console.log('[Analytics] PostHog initialized');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Analytics] PostHog initialized');
+      }
     },
   });
 }
@@ -82,7 +88,9 @@ export function trackEvent(
   properties?: AnalyticsEventProperties
 ): void {
   if (!posthogInstance) {
-    console.warn('[Analytics] PostHog not initialized. Event not tracked:', eventName);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Analytics] PostHog not initialized. Event not tracked:', eventName);
+    }
     return;
   }
 
@@ -92,7 +100,9 @@ export function trackEvent(
     environment: process.env.NODE_ENV || 'development',
   };
 
-  console.log('[Analytics] Tracking:', eventName, enrichedProperties);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Analytics] Tracking:', eventName, enrichedProperties);
+  }
   posthogInstance.capture(eventName, enrichedProperties);
 }
 
