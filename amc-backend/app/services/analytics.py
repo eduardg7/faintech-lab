@@ -135,11 +135,38 @@ class AnalyticsService:
         user_id: str,
         email: str,
         workspace_id: Optional[str] = None,
+        utm_source: Optional[str] = None,
+        utm_medium: Optional[str] = None,
+        utm_campaign: Optional[str] = None,
+        utm_content: Optional[str] = None,
+        utm_term: Optional[str] = None,
+        utm_referrer: Optional[str] = None,
     ) -> bool:
         """Track user signup event.
 
         Core Event 1/6: user_signup
+
+        Week 2 GTM: Include UTM parameters for channel attribution.
         """
+        properties = {
+            "email": email,
+            "workspace_id": workspace_id,
+        }
+
+        # Add UTM parameters for Week 2 GTM channel attribution
+        if utm_source:
+            properties["utm_source"] = utm_source
+        if utm_medium:
+            properties["utm_medium"] = utm_medium
+        if utm_campaign:
+            properties["utm_campaign"] = utm_campaign
+        if utm_content:
+            properties["utm_content"] = utm_content
+        if utm_term:
+            properties["utm_term"] = utm_term
+        if utm_referrer:
+            properties["utm_referrer"] = utm_referrer
+
         self.identify(user_id, {
             "email": email,
             "signup_date": datetime.now(timezone.utc).isoformat(),
@@ -147,10 +174,7 @@ class AnalyticsService:
         return self.track(
             event="user_signup",
             distinct_id=user_id,
-            properties={
-                "email": email,
-                "workspace_id": workspace_id,
-            },
+            properties=properties,
         )
 
     def track_email_verified(

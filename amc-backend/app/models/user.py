@@ -23,6 +23,14 @@ class User(Base):
     is_verified = Column(Boolean, nullable=False, default=False)
     is_superuser = Column(Boolean, nullable=False, default=False)
 
+    # UTM tracking for Week 2 GTM channel attribution
+    utm_source = Column(String(255), nullable=True, index=True)
+    utm_medium = Column(String(255), nullable=True, index=True)
+    utm_campaign = Column(String(255), nullable=True, index=True)
+    utm_content = Column(String(255), nullable=True)
+    utm_term = Column(String(255), nullable=True)
+    utm_referrer = Column(String(255), nullable=True, index=True)
+
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
