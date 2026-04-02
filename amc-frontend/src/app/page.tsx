@@ -1,14 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import OnboardingFlow from '@/components/OnboardingFlow';
 import LandingPage from '@/components/LandingPage';
 import MemoryList from '@/components/MemoryList';
+import { captureUTM } from '@/lib/analytics/utm-capture';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Capture UTM parameters on initial page load
+  // Task: LAB-ANALYTICS-20260401-UTMFALLBACK-PHASE1
+  useEffect(() => {
+    const utmData = captureUTM();
+    if (utmData && process.env.NODE_ENV === 'development') {
+      console.log('[Landing Page] UTM parameters captured:', utmData);
+    }
+  }, []);
 
   // If authenticated, check onboarding status
   if (isAuthenticated) {

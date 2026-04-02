@@ -90,6 +90,7 @@ describe('Health Score Calculator Logic', () => {
           featuresUsed: ['task_creation', 'agent_collaboration', 'standup_automation', 'api_integration'],
           npsScore: 10,
           feedbackSentiment: 'positive',
+          lastActiveAt: '2026-04-02T10:00:00Z', // Recent activity to avoid inactivity penalties
         });
         const result = calculator.calculate(userData);
 
