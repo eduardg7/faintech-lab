@@ -1,10 +1,10 @@
 /**
  * UTM Parameter Capture for Channel Attribution
  * Task: LAB-ANALYTICS-20260401-UTMFALLBACK-PHASE1
- * 
+ *
  * Phase 1: Client-side UTM fallback that works WITHOUT backend deployment
  * Enables Week 2 GTM channel attribution (HN, Reddit, LinkedIn, Twitter, direct)
- * 
+ *
  * Features:
  * - Extracts 6 UTM parameters from URL
  * - Persists in localStorage to preserve across signup flow
@@ -33,9 +33,9 @@ const UTM_PARAMS = [
 /**
  * Capture UTM parameters from current page URL
  * Extracts UTM params, stores in localStorage, returns UTM data
- * 
+ *
  * @returns UTMData object with captured parameters, or null if none found
- * 
+ *
  * @example
  * const utmData = captureUTM();
  * if (utmData) {
@@ -72,11 +72,11 @@ export function captureUTM(): UTMData | null {
 
   // Store in localStorage if any UTM params found
   const hasUTMParams = Object.values(utmData).some(val => val !== undefined);
-  
+
   if (hasUTMParams) {
     try {
       localStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(utmData));
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('[UTM Capture] Stored UTM data:', utmData);
       }
@@ -84,7 +84,7 @@ export function captureUTM(): UTMData | null {
       // localStorage might be disabled (private browsing, quota exceeded)
       console.warn('[UTM Capture] Failed to store UTM data:', e);
     }
-    
+
     return utmData;
   }
 
@@ -94,9 +94,9 @@ export function captureUTM(): UTMData | null {
 /**
  * Retrieve stored UTM data from localStorage
  * Use this to attach UTM data to analytics events
- * 
+ *
  * @returns UTMData object from storage, or null if not found/expired
- * 
+ *
  * @example
  * const storedUTM = getStoredUTM();
  * if (storedUTM) {
@@ -113,17 +113,17 @@ export function getStoredUTM(): UTMData | null {
 
   try {
     const stored = localStorage.getItem(UTM_STORAGE_KEY);
-    
+
     if (!stored) {
       return null;
     }
 
     const utmData = JSON.parse(stored) as UTMData;
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[UTM Capture] Retrieved stored UTM data:', utmData);
     }
-    
+
     return utmData;
   } catch (e) {
     console.error('[UTM Capture] Failed to parse stored UTM data:', e);
@@ -142,7 +142,7 @@ export function clearStoredUTM(): void {
 
   try {
     localStorage.removeItem(UTM_STORAGE_KEY);
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[UTM Capture] Cleared stored UTM data');
     }
@@ -154,14 +154,14 @@ export function clearStoredUTM(): void {
 /**
  * Attach UTM properties to PostHog event
  * Helper function that combines stored UTM with event properties
- * 
+ *
  * @param eventName - PostHog event name
  * @param properties - Event properties
  * @param posthog - PostHog instance
- * 
+ *
  * @example
  * import { getPostHog } from '../analytics';
- * 
+ *
  * const posthog = getPostHog();
  * if (posthog) {
  *   trackEventWithUTM('user_signup', { user_id: '123' }, posthog);
@@ -173,7 +173,7 @@ export function trackEventWithUTM(
   posthog: { capture: (name: string, props: Record<string, unknown>) => void }
 ): void {
   const utmData = getStoredUTM();
-  
+
   const enrichedProperties = {
     ...properties,
     ...utmData, // Attach UTM data to event

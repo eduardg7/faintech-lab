@@ -23,7 +23,7 @@
 
 **Script:**
 > "We launched on Hacker News yesterday with a completely broken product.
-> 
+>
 > Here's what happened, why it happened, and what we learned."
 
 ---
@@ -36,11 +36,11 @@
 
 **Script:**
 > "We launched at 17:00 EET on April 1st.
-> 
+>
 > The frontend was live - you could visit the site, see the landing page, click 'Sign Up'.
-> 
+>
 > But when you clicked sign up... nothing happened.
-> 
+>
 > The backend API was completely missing. All API endpoints returned 404."
 
 ---
@@ -54,11 +54,11 @@
 
 **Script:**
 > "So what went wrong?
-> 
+>
 > Two things: technical gap and process failure.
-> 
+>
 > Technical gap: Our deployment pipeline checked out frontend code, but never deployed the backend FastAPI app. The CI pipeline passed, but the actual backend never went to production.
-> 
+>
 > Process failure: We ran our launch checklist, but it didn't include 'verify backend is live'. We verified the frontend (HTTP 200), checked the demo URL, confirmed PRs were merged... but never actually tested the signup flow end-to-end."
 
 ---
@@ -71,11 +71,11 @@
 
 **Script:**
 > "Here's the thing: we knew the backend wasn't deployed 23 minutes before launch.
-> 
+>
 > A monitoring check at 16:37 EET flagged it. We escalated to the team.
-> 
+>
 > But we launched anyway.
-> 
+>
 > That's the process failure. No auto-halt on critical blocker. No automated health check that would stop the launch gate. No single point of ownership for 'stop the line' authority."
 
 ---
@@ -86,13 +86,13 @@
 
 **Script:**
 > "So what are we fixing?
-> 
+>
 > Launch gate checklist: Backend health check is now a mandatory step. No launch without `curl /api/health` returning 200.
-> 
+>
 > Auto-halt: If any critical check fails within 2 hours of launch time, auto-halt the launch and page the CTO.
-> 
+>
 > Health monitoring: We're adding automated health checks every 10 minutes. If backend goes down, we know before users do.
-> 
+>
 > Transparency policy: From now on, we share deployment status publicly. If we have issues, you'll see them on our status page, not discover them when you try to sign up."
 
 ---
@@ -106,9 +106,9 @@
 
 **Script:**
 > "The backend is deploying now. We'll be back live tomorrow.
-> 
+>
 > We're running Week 3 GTM next week - Reddit, LinkedIn, syndication.
-> 
+>
 > This time, with a working product and better launch gates."
 
 ---
@@ -119,9 +119,9 @@
 
 **Script:**
 > "We learned a lot from this. Engineering culture isn't about never failing - it's about failing fast, learning publicly, and fixing the root cause.
-> 
+>
 > If you've run into deployment gaps or launch failures, I'd love to hear your launch gate setups.
-> 
+>
 > Let's discuss in the comments."
 
 ---

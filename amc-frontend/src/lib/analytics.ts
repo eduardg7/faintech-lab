@@ -311,10 +311,10 @@ function getStoredUTMInline(): Record<string, string> | null {
 /**
  * Track an analytics event with automatic UTM enrichment
  * This is the preferred way to track events for GTM channel attribution
- * 
+ *
  * @param eventName - Event name from ANALYTICS_EVENTS
  * @param properties - Event properties
- * 
+ *
  * @example
  * // Track signup with UTM data automatically attached
  * trackEventWithUTM(ANALYTICS_EVENTS.USER_SIGNUP, {
@@ -328,7 +328,7 @@ export function trackEventWithUTM(
 ): void {
   // Get stored UTM data
   const utmData = getStoredUTMInline();
-  
+
   // Merge UTM data with event properties
   const enrichedProperties = {
     ...properties,
@@ -348,17 +348,17 @@ export function trackEventWithUTM(
   if (process.env.NODE_ENV === 'development') {
     console.log('[Analytics] Tracking with UTM:', eventName, enrichedProperties);
   }
-  
+
   posthogInstance.capture(eventName, enrichedProperties);
 }
 
 /**
  * Track user signup with UTM data (preferred method)
  * Automatically attaches stored UTM parameters for channel attribution
- * 
+ *
  * @param userId - User ID
  * @param email - User email (optional)
- * 
+ *
  * @example
  * // After successful signup
  * trackUserSignupWithUTM('user-123', 'user@example.com');

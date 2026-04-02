@@ -110,7 +110,7 @@ Week 2 GTM channels can now track attribution:
    ```javascript
    // Check localStorage
    localStorage.getItem('faintech_utm')
-   
+
    // Or use debug helper
    window.debugUTM()
    ```
