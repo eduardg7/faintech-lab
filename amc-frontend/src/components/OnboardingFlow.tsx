@@ -9,19 +9,64 @@ import {
   trackEvent,
 } from '@/lib/analytics';
 
-type StepId = 'welcome' | 'workspace' | 'api-key' | 'first-memory' | 'success';
+type StepId = 'welcome' | 'agent-setup' | 'first-memory' | 'search-memory' | 'success';
 
-const steps: StepId[] = ['welcome', 'workspace', 'api-key', 'first-memory', 'success'];
+const steps: StepId[] = ['welcome', 'agent-setup', 'first-memory', 'search-memory', 'success'];
 const defaultMemory = 'Track product decisions, customer feedback, and engineering learnings in one shared memory cloud.';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
+
+// Types for API responses
+interface MemoryResponse {
+  id: string;
+  workspace_id: string;
+  agent_id: string;
+  project_id: string | null;
+  memory_type: string;
+  content: string;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  importance: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+interface SearchResult {
+  id: string;
+  workspace_id: string;
+  agent_id: string;
+  project_id: string | null;
+  memory_type: string;
+  content: string;
+  tags: string[];
+  relevance_score: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_next: boolean;
+  query_time_ms: number;
+}
 
 export default function OnboardingFlow() {
   const { setApiKey } = useAuth();
   const [step, setStep] = useState<StepId>('welcome');
-  const [workspaceName, setWorkspaceName] = useState('Faintech Lab');
+  const [agentName, setAgentName] = useState('My First Agent');
+  const [agentRole, setAgentRole] = useState('assistant');
   const [key, setKey] = useState('');
   const [memoryDraft, setMemoryDraft] = useState(defaultMemory);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [createdMemory, setCreatedMemory] = useState<MemoryResponse | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTimeMs, setSearchTimeMs] = useState<number | null>(null);
 
   const currentIndex = steps.indexOf(step);
   const progress = ((currentIndex + 1) / steps.length) * 100;
@@ -30,29 +75,27 @@ export default function OnboardingFlow() {
   useEffect(() => {
     const hasStartedOnboarding = sessionStorage.getItem('amc_onboarding_started');
     if (!hasStartedOnboarding) {
-      // Generate a temporary user ID for tracking purposes
       const tempUserId = `temp_user_${Date.now()}`;
-      trackOnboardingStarted(tempUserId, { onboarding_version: 'v1' });
+      trackOnboardingStarted(tempUserId, { onboarding_version: 'v2' });
       sessionStorage.setItem('amc_onboarding_started', 'true');
       sessionStorage.setItem('amc_temp_user_id', tempUserId);
     }
   }, []);
 
   const generatedPreviewKey = useMemo(() => {
-    const slug = workspaceName
+    const slug = agentName
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'workspace';
+      .replace(/^_+|_+$/g, '') || 'agent';
 
     return `amc_live_${slug}_preview_2026`;
-  }, [workspaceName]);
+  }, [agentName]);
 
   const goToStep = (nextStep: StepId) => {
     setError('');
     setCopied(false);
 
-    // Track step completion if moving forward
     const nextIndex = steps.indexOf(nextStep);
     if (nextIndex > currentIndex) {
       trackEvent('onboarding_step_completed' as any, {
@@ -67,22 +110,22 @@ export default function OnboardingFlow() {
     setStep(nextStep);
   };
 
-  const handleWorkspaceSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleAgentSetupSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!workspaceName.trim()) {
-      setError('Choose a workspace name to continue.');
+    if (!agentName.trim()) {
+      setError('Enter an agent name to continue.');
       return;
     }
 
-    goToStep('api-key');
+    goToStep('first-memory');
   };
 
-  const handleApiKeySubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleMemorySubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!key.trim()) {
-      setError('Paste the API key to unlock the workspace.');
+      setError('API key is required to create a memory.');
       return;
     }
 
@@ -95,7 +138,102 @@ export default function OnboardingFlow() {
       return;
     }
 
-    goToStep('first-memory');
+    if (!memoryDraft.trim()) {
+      setError('Enter a memory to save.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/memories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key.trim()}`,
+        },
+        body: JSON.stringify({
+          agent_id: agentName.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'),
+          project_id: 'onboarding',
+          memory_type: 'learning',
+          content: memoryDraft.trim(),
+          tags: ['onboarding', 'first-memory'],
+          metadata: {
+            source: 'onboarding_flow',
+            agent_role: agentRole,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed to create memory: ${response.status}`);
+      }
+
+      const memory: MemoryResponse = await response.json();
+      setCreatedMemory(memory);
+
+      const userId = sessionStorage.getItem('amc_temp_user_id') || `user_${Date.now()}`;
+      trackFirstMemoryCreated(userId, {
+        memory_id: memory.id,
+        memory_type: memory.memory_type,
+      });
+
+      // Set search query to demonstrate value loop
+      const words = memoryDraft.trim().split(' ').slice(0, 3).join(' ');
+      setSearchQuery(words || 'memory');
+
+      goToStep('search-memory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create memory. Please check your API key.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!key.trim() || !searchQuery.trim()) {
+      setError('Enter a search query.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const params = new URLSearchParams({
+        q: searchQuery.trim(),
+        page: '1',
+        page_size: '5',
+      });
+
+      const response = await fetch(`${API_BASE_URL}/search/keyword?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${key.trim()}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Search failed: ${response.status}`);
+      }
+
+      const data: SearchResponse = await response.json();
+      setSearchResults(data.results);
+      setSearchTimeMs(data.query_time_ms);
+
+      trackEvent('onboarding_search_completed' as any, {
+        query: searchQuery,
+        results_count: data.results.length,
+        query_time_ms: data.query_time_ms,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCopyPreview = async () => {
@@ -108,33 +246,31 @@ export default function OnboardingFlow() {
   };
 
   const finishOnboarding = () => {
-    const trimmedWorkspace = workspaceName.trim();
+    const trimmedAgent = agentName.trim();
     const trimmedMemory = memoryDraft.trim();
     const trimmedKey = key.trim();
 
-    // Get or generate user ID for tracking
     const userId = sessionStorage.getItem('amc_temp_user_id') || `user_${Date.now()}`;
 
-    // Track signup completion (activation funnel step 1)
     trackSignupCompleted(userId);
 
-    // Track first memory creation (activation funnel step 3)
-    trackFirstMemoryCreated(userId, {
-      memory_id: `memory_${Date.now()}`,
-      memory_type: 'onboarding_draft',
-    });
-
-    // Track final step completion
     trackEvent('onboarding_completed' as any, {
-      workspace_name: trimmedWorkspace,
+      agent_name: trimmedAgent,
       has_custom_memory: trimmedMemory !== defaultMemory,
+      memory_created: !!createdMemory,
+      search_performed: searchResults.length > 0,
       timestamp: new Date().toISOString(),
     });
 
     localStorage.setItem('amc_onboarding_completed', 'true');
-    localStorage.setItem('amc_workspace_name', trimmedWorkspace);
+    localStorage.setItem('amc_agent_name', trimmedAgent);
     localStorage.setItem('amc_first_memory_draft', trimmedMemory);
     localStorage.setItem('amc_onboarding_completed_at', new Date().toISOString());
+
+    if (createdMemory) {
+      localStorage.setItem('amc_first_memory_id', createdMemory.id);
+    }
+
     setApiKey(trimmedKey);
     goToStep('success');
   };
@@ -159,9 +295,9 @@ export default function OnboardingFlow() {
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {[
-              ['Step 1', 'Clarify the workspace and why it exists.'],
-              ['Step 2', 'Connect auth and save the first API key.'],
-              ['Step 3', 'Write the first memory, then open the dashboard.'],
+              ['Step 1', 'Configure your first AI agent.'],
+              ['Step 2', 'Write a memory to the API.'],
+              ['Step 3', 'Search and retrieve your memory.'],
             ].map(([title, copy]) => (
               <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-sm font-semibold text-white">{title}</p>
@@ -224,7 +360,7 @@ export default function OnboardingFlow() {
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => goToStep('workspace')}
+                  onClick={() => goToStep('agent-setup')}
                   className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
                   Start onboarding
@@ -240,69 +376,58 @@ export default function OnboardingFlow() {
             </div>
           )}
 
-          {step === 'workspace' && (
-            <form className="space-y-6" onSubmit={handleWorkspaceSubmit}>
+          {step === 'agent-setup' && (
+            <form className="space-y-6" onSubmit={handleAgentSetupSubmit}>
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-primary">Workspace setup</p>
-                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Name the workspace</h2>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-primary">Agent setup</p>
+                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Configure your first agent</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  This name seeds the API-key preview and gives the onboarding flow a team-specific tone.
+                  Give your AI agent a name and role. This agent will own the memories you create.
                 </p>
               </div>
               <div>
-                <label htmlFor="workspace-name" className="block text-sm font-medium text-slate-700">
-                  Workspace name
+                <label htmlFor="agent-name" className="block text-sm font-medium text-slate-700">
+                  Agent name
                 </label>
                 <input
-                  id="workspace-name"
-                  name="workspace-name"
-                  value={workspaceName}
-                  onChange={(event) => setWorkspaceName(event.target.value)}
+                  id="agent-name"
+                  name="agent-name"
+                  value={agentName}
+                  onChange={(event) => setAgentName(event.target.value)}
                   className="mt-2 block w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-950 outline-none ring-0 transition focus:border-amc-primary focus:ring-2 focus:ring-amc-primary/20"
-                  placeholder="Acme Research Workspace"
+                  placeholder="My Research Agent"
                 />
               </div>
               {error && (
-            <p
-              id="workspace-name-error"
-              role="alert"
-              aria-live="assertive"
-              className="text-sm text-amc-error"
-              tabIndex={-1}
-            >
-              {error}
-            </p>
-          )}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => goToStep('welcome')}
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                <p
+                  id="agent-name-error"
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-sm text-amc-error"
+                  tabIndex={-1}
                 >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  Continue
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 'api-key' && (
-            <form className="space-y-6" onSubmit={handleApiKeySubmit} noValidate>
-              <div>
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-primary">API access</p>
-                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Generate and save the first API key</h2>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  Backend auto-generation is still pending, so this frontend slice shows the final UX with a
-                  preview key and copy affordance while preserving the current manual auth path.
+                  {error}
                 </p>
+              )}
+              <div>
+                <label htmlFor="agent-role" className="block text-sm font-medium text-slate-700">
+                  Agent role
+                </label>
+                <select
+                  id="agent-role"
+                  name="agent-role"
+                  value={agentRole}
+                  onChange={(event) => setAgentRole(event.target.value)}
+                  className="mt-2 block w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-950 outline-none ring-0 transition focus:border-amc-primary focus:ring-2 focus:ring-amc-primary/20"
+                >
+                  <option value="assistant">Assistant</option>
+                  <option value="researcher">Researcher</option>
+                  <option value="developer">Developer</option>
+                  <option value="analyst">Analyst</option>
+                </select>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Preview key</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Preview API key</p>
                 <p className="mt-2 break-all rounded-xl bg-slate-950 px-4 py-3 font-mono text-sm text-emerald-300">
                   {generatedPreviewKey}
                 </p>
@@ -338,7 +463,7 @@ export default function OnboardingFlow() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => goToStep('workspace')}
+                  onClick={() => goToStep('welcome')}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
                   Back
@@ -354,18 +479,22 @@ export default function OnboardingFlow() {
           )}
 
           {step === 'first-memory' && (
-            <div className="space-y-6">
+            <form className="space-y-6" onSubmit={handleMemorySubmit} noValidate>
               <div>
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-primary">First memory</p>
-                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Teach the team what to store</h2>
+                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Write your first memory</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  Give new users a realistic starting point they can edit before sending the first memory to
-                  the API. This primes the value prop before the dashboard loads.
+                  This memory will be stored via the API and can be searched in the next step.
+                  Edit the draft below or use the default.
                 </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                <p className="font-medium text-slate-700">Agent: <span className="text-amc-primary">{agentName}</span></p>
+                <p className="mt-1 text-xs text-slate-500">Memory will be created with this agent ID</p>
               </div>
               <div>
                 <label htmlFor="memory-draft" className="block text-sm font-medium text-slate-700">
-                  First memory tutorial draft
+                  First memory content
                 </label>
                 <textarea
                   id="memory-draft"
@@ -376,14 +505,101 @@ export default function OnboardingFlow() {
                   className="mt-2 block w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-950 outline-none transition focus:border-amc-primary focus:ring-2 focus:ring-amc-primary/20"
                 />
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-                Completion state is saved to localStorage now so returning users can bypass the first-run flow.
-                Hook the final submit CTA to the upcoming API key generation + analytics endpoints in the next slice.
-              </div>
+              {error && (
+                <p className="text-sm text-amc-error" role="alert">
+                  {error}
+                </p>
+              )}
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => goToStep('api-key')}
+                  onClick={() => goToStep('agent-setup')}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  disabled={isLoading}
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {isLoading ? 'Creating...' : 'Create memory'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === 'search-memory' && (
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-primary">Search memory</p>
+                <h2 className="mt-2 text-3xl font-semibold text-slate-950">Retrieve your memory</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Search the memory cloud to verify your memory was stored and demonstrate the full value loop.
+                </p>
+              </div>
+              {createdMemory && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  <p className="font-medium">Memory created successfully!</p>
+                  <p className="mt-1 text-xs text-emerald-700">ID: {createdMemory.id}</p>
+                </div>
+              )}
+              <div>
+                <label htmlFor="search-query" className="block text-sm font-medium text-slate-700">
+                  Search query
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="search-query"
+                    name="search-query"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-slate-950 outline-none transition focus:border-amc-primary focus:ring-2 focus:ring-amc-primary/20"
+                    placeholder="Search your memories..."
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearch}
+                    disabled={isLoading || !searchQuery.trim()}
+                    className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Searching...' : 'Search'}
+                  </button>
+                </div>
+              </div>
+              {searchTimeMs !== null && (
+                <p className="text-xs text-slate-500">
+                  Search completed in {searchTimeMs.toFixed(2)}ms
+                </p>
+              )}
+              {searchResults.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-700">Results ({searchResults.length})</p>
+                  {searchResults.map((result) => (
+                    <div key={result.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-slate-700 line-clamp-3">{result.content}</p>
+                        <span className="shrink-0 rounded-full bg-amc-primary/10 px-2 py-1 text-xs font-medium text-amc-primary">
+                          {(result.relevance_score * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Agent: {result.agent_id} • Type: {result.memory_type}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {error && (
+                <p className="text-sm text-amc-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => goToStep('first-memory')}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
                   Back
@@ -393,7 +609,7 @@ export default function OnboardingFlow() {
                   onClick={finishOnboarding}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl bg-amc-success px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
                 >
-                  Mark onboarding complete
+                  Complete setup
                 </button>
               </div>
             </div>
@@ -408,12 +624,32 @@ export default function OnboardingFlow() {
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-amc-success">Success</p>
                 <h2 className="mt-2 text-3xl font-semibold text-slate-950">Ready to code</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  {workspaceName.trim() || 'Your workspace'} is configured. The API key is stored locally and the
-                  first memory draft is saved as onboarding seed content.
+                  {agentName.trim() || 'Your agent'} is configured and your first memory is stored.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                The dashboard will open automatically after this screen because the auth context now has a valid key.
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                {createdMemory && (
+                  <div className="flex justify-between">
+                    <span>Memory created:</span>
+                    <span className="font-medium text-slate-700">Yes</span>
+                  </div>
+                )}
+                {searchResults.length > 0 && (
+                  <div className="flex justify-between">
+                    <span>Search results:</span>
+                    <span className="font-medium text-slate-700">{searchResults.length} found</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Agent:</span>
+                  <span className="font-medium text-slate-700">{agentName}</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <p className="font-medium">Full value loop complete!</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  You&apos;ve written a memory and retrieved it via search. The dashboard is ready.
+                </p>
               </div>
             </div>
           )}

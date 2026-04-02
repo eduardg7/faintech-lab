@@ -159,6 +159,7 @@ async def get_current_auth_context(
 )
 async def register(
     user_data: UserRegister,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -209,6 +210,13 @@ async def register(
         full_name=user_data.full_name,
         is_active=True,
         is_verified=True,  # For MVP, auto-verify (add email verification later)
+        # UTM tracking for Week 2 GTM channel attribution
+        utm_source=user_data.utm_source,
+        utm_medium=user_data.utm_medium,
+        utm_campaign=user_data.utm_campaign,
+        utm_content=user_data.utm_content,
+        utm_term=user_data.utm_term,
+        utm_referrer=user_data.utm_referrer,
     )
     db.add(user)
     await db.flush()
@@ -234,11 +242,17 @@ async def register(
     db.add(refresh_token)
     await db.commit()
 
-    # Track user signup event
+    # Track user signup event with UTM parameters for Week 2 GTM channel attribution
     analytics.track_signup(
         user_id=user.id,
         email=user.email,
-        workspace_id=user.workspace_id
+        workspace_id=user.workspace_id,
+        utm_source=user.utm_source,
+        utm_medium=user.utm_medium,
+        utm_campaign=user.utm_campaign,
+        utm_content=user.utm_content,
+        utm_term=user.utm_term,
+        utm_referrer=user.utm_referrer,
     )
 
     return AuthResponse(

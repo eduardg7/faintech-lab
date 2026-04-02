@@ -10,6 +10,13 @@ class UserRegister(BaseModel):
     password: str = Field(..., min_length=8, max_length=128, description="Password (min 8 chars)")
     full_name: Optional[str] = Field(None, max_length=255, description="Full name")
     workspace_name: Optional[str] = Field(None, max_length=255, description="Workspace name (creates new workspace)")
+    # UTM tracking for Week 2 GTM channel attribution
+    utm_source: Optional[str] = Field(None, max_length=255, description="UTM source parameter (e.g., 'hn', 'reddit', 'linkedin')")
+    utm_medium: Optional[str] = Field(None, max_length=255, description="UTM medium parameter (e.g., 'post', 'article', 'referral')")
+    utm_campaign: Optional[str] = Field(None, max_length=255, description="UTM campaign identifier")
+    utm_content: Optional[str] = Field(None, max_length=255, description="UTM content parameter (A/B test variant)")
+    utm_term: Optional[str] = Field(None, max_length=255, description="UTM term/keyword parameter")
+    utm_referrer: Optional[str] = Field(None, max_length=255, description="UTM referrer (URL of referring page)")
 
 
 class UserLogin(BaseModel):

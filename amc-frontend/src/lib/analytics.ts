@@ -14,6 +14,8 @@
  */
 
 import { PostHog } from 'posthog-js';
+// Note: UTM functions will be imported inline to avoid circular dependency issues
+// import { getStoredUTM } from './analytics/utm-capture';
 
 let posthogInstance: PostHog | null = null;
 
@@ -279,4 +281,91 @@ export function trackFeatureDiscovered(
  */
 export function getPostHog(): PostHog | null {
   return posthogInstance;
+}
+
+// ============================================================================
+// UTM-Aware Event Tracking (Task: LAB-ANALYTICS-20260401-UTMFALLBACK-PHASE1)
+// ============================================================================
+
+/**
+ * Get stored UTM data from localStorage
+ * Inline implementation to avoid circular dependency
+ */
+function getStoredUTMInline(): Record<string, string> | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem('faintech_utm');
+    if (!stored) {
+      return null;
+    }
+    return JSON.parse(stored);
+  } catch (e) {
+    console.error('[Analytics] Failed to parse stored UTM data:', e);
+    return null;
+  }
+}
+
+/**
+ * Track an analytics event with automatic UTM enrichment
+ * This is the preferred way to track events for GTM channel attribution
+ * 
+ * @param eventName - Event name from ANALYTICS_EVENTS
+ * @param properties - Event properties
+ * 
+ * @example
+ * // Track signup with UTM data automatically attached
+ * trackEventWithUTM(ANALYTICS_EVENTS.USER_SIGNUP, {
+ *   user_id: '123',
+ *   email: 'user@example.com',
+ * });
+ */
+export function trackEventWithUTM(
+  eventName: AnalyticsEvent,
+  properties?: AnalyticsEventProperties
+): void {
+  // Get stored UTM data
+  const utmData = getStoredUTMInline();
+  
+  // Merge UTM data with event properties
+  const enrichedProperties = {
+    ...properties,
+    ...utmData, // Attach UTM parameters
+    timestamp: properties?.timestamp || new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  };
+
+  if (!posthogInstance) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Analytics] PostHog not initialized. Event not tracked:', eventName);
+      console.log('[Analytics] Would have tracked with UTM:', eventName, enrichedProperties);
+    }
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Analytics] Tracking with UTM:', eventName, enrichedProperties);
+  }
+  
+  posthogInstance.capture(eventName, enrichedProperties);
+}
+
+/**
+ * Track user signup with UTM data (preferred method)
+ * Automatically attaches stored UTM parameters for channel attribution
+ * 
+ * @param userId - User ID
+ * @param email - User email (optional)
+ * 
+ * @example
+ * // After successful signup
+ * trackUserSignupWithUTM('user-123', 'user@example.com');
+ */
+export function trackUserSignupWithUTM(userId: string, email?: string): void {
+  trackEventWithUTM(ANALYTICS_EVENTS.USER_SIGNUP, {
+    user_id: userId,
+    email,
+  });
 }
