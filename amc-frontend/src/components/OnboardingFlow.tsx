@@ -506,7 +506,13 @@ export default function OnboardingFlow() {
                 />
               </div>
               {error && (
-                <p className="text-sm text-amc-error" role="alert">
+                <p
+                  id="workspace-name-error"
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-sm text-amc-error"
+                  tabIndex={-1}
+                >
                   {error}
                 </p>
               )}
@@ -592,7 +598,13 @@ export default function OnboardingFlow() {
                 </div>
               )}
               {error && (
-                <p className="text-sm text-amc-error" role="alert">
+                <p
+                  id="first-memory-error"
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-sm text-amc-error"
+                  tabIndex={-1}
+                >
                   {error}
                 </p>
               )}
