@@ -88,6 +88,10 @@ export default function OnboardingFlow() {
 
     if (!key.startsWith('amc_live_')) {
       setError('Invalid API key format. Key should start with "amc_live_".');
+      const errorElement = document.getElementById('api-key-error');
+      if (errorElement) {
+        errorElement.focus();
+      }
       return;
     }
 
@@ -168,11 +172,22 @@ export default function OnboardingFlow() {
 
           <div className="mt-10 rounded-2xl border border-white/10 bg-black/20 p-5">
             <div className="flex items-center justify-between text-sm text-slate-300">
-              <span>Flow completion</span>
-              <span>{Math.round(progress)}%</span>
+              <span id="onboarding-progress-label">Flow completion</span>
+              <span aria-labelledby="onboarding-progress-label">{Math.round(progress)}%</span>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-white/10">
-              <div className="h-2 rounded-full bg-gradient-to-r from-amc-primary via-amc-secondary to-amc-success" style={{ width: `${progress}%` }} />
+            <div
+              className="mt-3 h-2 rounded-full bg-white/10"
+              role="progressbar"
+              aria-valuenow={Math.round(progress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-labelledby="onboarding-progress-label"
+            >
+              <div
+                className="h-2 rounded-full bg-gradient-to-r from-amc-primary via-amc-secondary to-amc-success"
+                style={{ width: `${progress}%` }}
+                aria-label={`${Math.round(progress)}% complete`}
+              />
             </div>
             <ol className="mt-4 space-y-2 text-sm text-slate-300">
               {steps.map((item, index) => {
@@ -206,13 +221,22 @@ export default function OnboardingFlow() {
                 <p>• Use API-key auth to protect workspace data per team.</p>
                 <p>• Give a first memory example so new users understand the value instantly.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => goToStep('workspace')}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Start onboarding
-              </button>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => goToStep('workspace')}
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Start onboarding
+                </button>
+                <button
+                  type="button"
+                  onClick={finishOnboarding}
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  Skip for now
+                </button>
+              </div>
             </div>
           )}
 
@@ -238,7 +262,17 @@ export default function OnboardingFlow() {
                   placeholder="Acme Research Workspace"
                 />
               </div>
-              {error && <p className="text-sm text-amc-error">{error}</p>}
+              {error && (
+            <p
+              id="workspace-name-error"
+              role="alert"
+              aria-live="assertive"
+              className="text-sm text-amc-error"
+              tabIndex={-1}
+            >
+              {error}
+            </p>
+          )}
               <div className="flex gap-3">
                 <button
                   type="button"
