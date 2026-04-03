@@ -522,12 +522,14 @@ export default function OnboardingFlow() {
                   onClick={() => goToStep('agent-setup')}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   disabled={isLoading}
+                  aria-busy={isLoading}
                 >
                   Back
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
+                  aria-busy={isLoading}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
                 >
                   {isLoading ? 'Creating...' : 'Create memory'}
@@ -568,6 +570,7 @@ export default function OnboardingFlow() {
                     type="button"
                     onClick={handleSearch}
                     disabled={isLoading || !searchQuery.trim()}
+                    aria-busy={isLoading}
                     className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
                   >
                     {isLoading ? 'Searching...' : 'Search'}
