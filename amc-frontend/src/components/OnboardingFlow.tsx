@@ -318,11 +318,12 @@ export default function OnboardingFlow() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-labelledby="onboarding-progress-label"
+              aria-label={`${Math.round(progress)}% complete`}
             >
               <div
                 className="h-2 rounded-full bg-gradient-to-r from-amc-primary via-amc-secondary to-amc-success"
                 style={{ width: `${progress}%` }}
-                aria-label={`${Math.round(progress)}% complete`}
+                aria-hidden="true"
               />
             </div>
             <ol className="mt-4 space-y-2 text-sm text-slate-300">
