@@ -36,7 +36,7 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
               </button>
               <button
                 onClick={onStartOnboarding}
-                className="inline-flex items-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex items-center rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md"
               >
                 Start Free Trial
               </button>
@@ -55,28 +55,31 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
               Persistent memory for AI teams
             </div>
 
+            {/* Badge */}
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-green-600" />
+              Memory for AI Teams
+            </div>
+
             {/* Headline */}
             <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
-              Give your AI agents a{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                shared brain
-              </span>
+              Never lose an AI insight again
             </h1>
 
             {/* Subheadline */}
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-              Capture decisions, learnings, and context in one memory cloud. Your AI agents finally remember everything across conversations.
+              Give your AI team persistent memory. Capture decisions, learnings, and context in one shared brain.
             </p>
 
             {/* CTA Buttons */}
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="mt-12 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
               <button
                 onClick={onStartOnboarding}
-                className="inline-flex items-center rounded-2xl bg-slate-950 px-8 py-4 text-base font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
+                className="inline-flex items-center rounded-3xl bg-blue-600 px-10 py-5 text-lg font-bold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl"
               >
                 Start Free Trial
                 <svg
-                  className="ml-2 h-5 w-5"
+                  className="ml-3 h-6 w-6"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -91,10 +94,10 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
               </button>
               <button
                 onClick={() => setShowDemo(!showDemo)}
-                className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-8 py-4 text-base font-semibold text-slate-900 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
+                className="inline-flex items-center rounded-3xl border-2 border-blue-600 bg-white px-10 py-5 text-lg font-bold text-blue-600 transition hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <svg
-                  className="mr-2 h-5 w-5 text-blue-600"
+                  className="mr-3 h-6 w-6"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -116,30 +119,53 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
               </button>
             </div>
 
+            {/* Urgency indicator */}
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-yellow-50 border border-yellow-200 px-4 py-2">
+              <svg className="h-4 w-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm font-medium text-yellow-800">Start your first memory in 60 seconds</span>
+            </div>
+
             {/* Social Proof */}
             <div className="mt-16 border-t border-slate-200 pt-8">
               <p className="text-sm font-medium uppercase tracking-wider text-slate-500">
-                Trusted by development teams
+                Loved by AI development teams
               </p>
-              <div className="mt-6 flex items-center justify-center gap-8 text-slate-400">
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                  </svg>
-                  <span className="text-sm">Shared Memory</span>
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <div className="text-center">
+                  <div className="flex justify-center">
+                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-blue-600">500+</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-slate-900">Memories Created</p>
+                  <p className="text-xs text-slate-500">This week</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span className="text-sm">Instant Access</span>
+                <div className="text-center">
+                  <div className="flex justify-center">
+                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-green-600">15+</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-slate-900">Teams Active</p>
+                  <p className="text-xs text-slate-500">Across startups</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm">API-First</span>
+                <div className="text-center">
+                  <div className="flex justify-center">
+                    <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-purple-600">4.8</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-slate-900">User Rating</p>
+                  <p className="text-xs text-slate-500">Based on 50+ reviews</p>
                 </div>
+              </div>
+              <div className="mt-8 text-center">
+                <p className="text-sm text-slate-600 italic">
+                  "Finally, our AI agents remember what happened yesterday"
+                </p>
+                <p className="mt-1 text-xs text-slate-500">— Engineering Team, Series B Startup</p>
               </div>
             </div>
           </div>
@@ -336,20 +362,20 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
 
         {/* Final CTA Section */}
         <div className="py-20 border-t border-slate-200">
-          <div className="rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-16 text-center sm:px-16">
+          <div className="rounded-3xl bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-16 text-center sm:px-16 shadow-2xl">
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ready to give your AI agents a memory?
+              Ready to give your AI team a memory?
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-              Start capturing decisions, learnings, and context today. No credit card required.
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-blue-100">
+              Join teams who never lose insights. Start capturing decisions and context in 60 seconds.
             </p>
             <button
               onClick={onStartOnboarding}
-              className="mt-8 inline-flex items-center rounded-2xl bg-white px-8 py-4 text-base font-semibold text-slate-900 transition hover:bg-slate-100"
+              className="mt-8 inline-flex items-center rounded-3xl bg-white px-10 py-5 text-lg font-bold text-blue-600 transition hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 shadow-lg"
             >
               Start Free Trial
               <svg
-                className="ml-2 h-5 w-5"
+                className="ml-3 h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -362,6 +388,9 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
                 />
               </svg>
             </button>
+            <p className="mt-4 text-sm text-blue-100">
+              No credit card required • Cancel anytime
+            </p>
           </div>
         </div>
 
