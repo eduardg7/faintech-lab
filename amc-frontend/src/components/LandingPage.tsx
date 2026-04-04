@@ -50,25 +50,19 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
         <div className="py-20 sm:py-32">
           <div className="text-center">
             {/* Badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-blue-600" />
-              Persistent memory for AI teams
-            </div>
-
-            {/* Badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-green-600" />
-              Memory for AI Teams
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700">
+              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+              Shared memory for AI development teams
             </div>
 
             {/* Headline */}
             <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
-              Never lose an AI insight again
+              Your AI agents finally remember what matters
             </h1>
 
             {/* Subheadline */}
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-              Give your AI team persistent memory. Capture decisions, learnings, and context in one shared brain.
+              Store decisions, learnings, and context once. Your entire team—humans and AI agents—accesses it instantly. Stop re-explaining the same context every conversation.
             </p>
 
             {/* CTA Buttons */}
@@ -120,11 +114,11 @@ export default function LandingPage({ onStartOnboarding }: LandingPageProps) {
             </div>
 
             {/* Urgency indicator */}
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-yellow-50 border border-yellow-200 px-4 py-2">
-              <svg className="h-4 w-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-green-50 border border-green-200 px-4 py-2">
+              <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16 0zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
-              <span className="text-sm font-medium text-yellow-800">Start your first memory in 60 seconds</span>
+              <span className="text-sm font-semibold text-green-800">⚡ Setup in under 60 seconds • No credit card</span>
             </div>
 
             {/* Social Proof */}
