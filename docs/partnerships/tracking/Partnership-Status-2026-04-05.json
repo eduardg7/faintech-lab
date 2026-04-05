@@ -1,0 +1,145 @@
+{
+  "partnerships": {
+    "tracking_id": "PHASE1-2026-04-05",
+    "activation_window": {
+      "start": "2026-04-05T08:48:00+03:00",
+      "end": "2026-04-06T08:48:00+03:00",
+      "status": "ACTIVE",
+      "remaining_hours": 19.25
+    },
+    "last_updated": "2026-04-05T13:50:00+03:00",
+    "outreach_metrics": {
+      "total_labs_targeted": 10,
+      "emails_sent": 3,
+      "emails_pending": 7,
+      "emails_sent_percentage": 30,
+      "tier_1_labs_contacted": 3,
+      "email_variant_performance": {
+        "RESEARCH_FOCUSED": {"sent": 1, "responses": 0, "lab": "Stanford AI Lab"},
+        "COLLABORATION_FOCUSED": {"sent": 1, "responses": 0, "lab": "MIT CSAIL"},
+        "TECHNICAL_FOCUSED": {"sent": 1, "responses": 0, "lab": "UC Berkeley BAIR"}
+      }
+    },
+    "response_metrics": {
+      "total_responses": 0,
+      "response_rate": 0,
+      "positive_responses": 0,
+      "negative_responses": 0,
+      "information_requests": 0,
+      "meeting_requests": 0,
+      "avg_response_time_hours": null
+    },
+    "pipeline_metrics": {
+      "prospects": 10,
+      "interested": 0,
+      "meetings_scheduled": 0,
+      "proposals_sent": 0,
+      "agreements_signed": 0,
+      "active_partnerships": 0,
+      "conversion_rates": {
+        "email_to_response": 0,
+        "response_to_meeting": 0,
+        "meeting_to_partnership": 0,
+        "overall": 0
+      }
+    },
+    "labs": [
+      {
+        "lab_id": "stanford-ai-lab",
+        "lab_name": "Stanford AI Lab",
+        "contact_person": "Prof. Christopher Manning",
+        "email": "memory-systems@stanford.edu",
+        "priority": "HIGH",
+        "tier": 1,
+        "status": "EMAIL_SENT",
+        "outreach": {
+          "email_sent": "2026-04-05T13:35:00+03:00",
+          "email_variant": "RESEARCH_FOCUSED",
+          "subject": "Research Partnership: Joint Agent Memory Architecture Research - Stanford/Faintech",
+          "follow_up_scheduled": "2026-04-07T13:35:00+03:00",
+          "follow_up_sent": null,
+          "final_notice_sent": null
+        },
+        "response": {
+          "first_response": null,
+          "response_type": null,
+          "response_sentiment": null,
+          "meeting_requested": false,
+          "meeting_scheduled": null,
+          "partnership_interest": null
+        },
+        "partnership": {
+          "status": "PROSPECT",
+          "agreement_sent": null,
+          "agreement_signed": null,
+          "research_kickoff": null,
+          "notes": "Perfect alignment with AMC research focus. High priority for immediate follow-up. Research-focused email sent emphasizing joint publication potential."
+        }
+      },
+      {
+        "lab_id": "mit-csail",
+        "lab_name": "MIT CSAIL",
+        "contact_person": "Prof. Leslie Kaelbling",
+        "email": "agent-intelligence@csail.mit.edu",
+        "priority": "HIGH",
+        "tier": 1,
+        "status": "EMAIL_SENT",
+        "outreach": {
+          "email_sent": "2026-04-05T13:40:00+03:00",
+          "email_variant": "COLLABORATION_FOCUSED",
+          "subject": "Collaboration Invitation: Advancing Multi-Agent Memory Research Together - MIT/Faintech",
+          "follow_up_scheduled": "2026-04-07T13:40:00+03:00",
+          "follow_up_sent": null,
+          "final_notice_sent": null
+        },
+        "response": {
+          "first_response": null,
+          "response_type": null,
+          "response_sentiment": null,
+          "meeting_requested": false,
+          "meeting_scheduled": null,
+          "partnership_interest": null
+        },
+        "partnership": {
+          "status": "PROSPECT",
+          "agreement_sent": null,
+          "agreement_signed": null,
+          "research_kickoff": null,
+          "notes": "Multi-agent coordination focus. Collaboration-focused email sent emphasizing joint research in scalable coordination protocols. Strong alignment with MIT's theoretical foundation."
+        }
+      },
+      {
+        "lab_id": "uc-berkeley-bair",
+        "lab_name": "UC Berkeley BAIR",
+        "contact_person": "Prof. Jitendra Malik",
+        "email": "bair-contact@berkeley.edu",
+        "priority": "HIGH",
+        "tier": 1,
+        "status": "EMAIL_SENT",
+        "outreach": {
+          "email_sent": "2026-04-05T13:45:00+03:00",
+          "email_variant": "TECHNICAL_FOCUSED",
+          "subject": "Technical Access: Production-Ready Memory Architecture for Multi-Agent Research - Berkeley/Faintech",
+          "follow_up_scheduled": "2026-04-07T13:45:00+03:00",
+          "follow_up_sent": null,
+          "final_notice_sent": null
+        },
+        "response": {
+          "first_response": null,
+          "response_type": null,
+          "response_sentiment": null,
+          "meeting_requested": false,
+          "meeting_scheduled": null,
+          "partnership_interest": null
+        },
+        "partnership": {
+          "status": "PROSPECT",
+          "agreement_sent": null,
+          "agreement_signed": null,
+          "research_kickoff": null,
+          "notes": "Systems-oriented technical focus. Technical-focused email sent emphasizing bridge between theoretical research and practical implementation. Strong technical alignment with Berkeley's approach."
+        }
+      }
+    ]
+  }
+}
